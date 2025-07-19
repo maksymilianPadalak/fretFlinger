@@ -1,91 +1,95 @@
 import { Preset } from './types';
 
+// Define presets directly to avoid JSON import issues
 export const PRESETS: Preset[] = [
   {
     name: 'Slow & Sad Emotional',
-    description: 'Melancholic ballad in C major for emotional guitar solos',
-    bpm: 80,
+    description:
+      'Melancholic ballad in C major for emotional guitar solos - perfect for expressive playing',
+    bpm: 75,
     tracks: {
       kick: {
-        steps: new Array(32).fill(null).map((_, i) => ({
-          active: i % 8 === 0,
+        steps: Array.from({ length: 64 }, (_, i) => ({
+          active: i === 0 || i === 16 || i === 32 || i === 48,
           note: 'C1',
+        })),
+        volume: 0.4,
+        muted: false,
+      },
+      snare: {
+        steps: Array.from({ length: 64 }, (_, i) => ({
+          active: i === 8 || i === 24 || i === 40 || i === 56,
+          note: 'C2',
+        })),
+        volume: 0.3,
+        muted: false,
+      },
+      hihat: {
+        steps: Array.from({ length: 64 }, (_, i) => ({
+          active: i % 4 === 2,
+          note: 'C3',
+        })),
+        volume: 0.2,
+        muted: false,
+      },
+      bass: {
+        steps: Array.from({ length: 64 }, (_, i) => ({
+          active: i % 8 === 0,
+          note: i < 16 ? 'C2' : i < 32 ? 'A1' : i < 48 ? 'F2' : 'G2',
+        })),
+        volume: 0.7,
+        muted: false,
+      },
+      piano: {
+        steps: Array.from({ length: 64 }, (_, i) => ({
+          active: i % 16 === 4 || i % 16 === 11,
+          note: i < 16 ? 'C' : i < 32 ? 'Am' : i < 48 ? 'F' : 'G',
         })),
         volume: 0.6,
         muted: false,
       },
-      snare: {
-        steps: new Array(32).fill(null).map((_, i) => ({
-          active: i % 16 === 8,
-          note: 'C2',
-        })),
-        volume: 0.4,
-        muted: false,
-      },
-      hihat: {
-        steps: new Array(32).fill(null).map((_, i) => ({
-          active: i % 4 === 2,
-          note: 'C3',
-        })),
-        volume: 0.3,
-        muted: false,
-      },
-      bass: {
-        steps: new Array(32).fill(null).map((_, i) => ({
-          active: i % 16 === 0 || i % 16 === 8,
-          note: i < 8 ? 'C2' : i < 16 ? 'A1' : i < 24 ? 'F2' : 'G2',
-        })),
-        volume: 0.5,
-        muted: false,
-      },
-      piano: {
-        steps: new Array(32).fill(null).map((_, i) => ({
-          active: i % 8 === 4,
-          note: i < 8 ? 'C' : i < 16 ? 'Am' : i < 24 ? 'F' : 'G',
-        })),
-        volume: 0.4,
-        muted: false,
-      },
       pad: {
-        steps: new Array(32).fill(null).map((_, i) => ({
+        steps: Array.from({ length: 64 }, (_, i) => ({
           active: i % 16 === 0,
-          note: i < 16 ? 'C' : i < 24 ? 'F' : 'G',
+          note: i < 16 ? 'C' : i < 32 ? 'Am' : i < 48 ? 'F' : 'G',
         })),
-        volume: 0.3,
+        volume: 0.4,
         muted: false,
       },
       lead: {
-        steps: new Array(32)
-          .fill(null)
-          .map(() => ({ active: false, note: 'C4' })),
-        volume: 0.4,
+        steps: Array.from({ length: 64 }, () => ({
+          active: false,
+          note: 'C4',
+        })),
+        volume: 0.3,
         muted: true,
       },
     },
   },
   {
     name: 'Blues Groove',
-    description: 'Classic 12-bar blues feel with swing rhythm',
-    bpm: 120,
+    description:
+      'Authentic 12-bar blues progression with shuffle feel - perfect for blues guitar improvisation',
+    bpm: 115,
     tracks: {
       kick: {
-        steps: new Array(32).fill(null).map((_, i) => ({
+        steps: Array.from({ length: 64 }, (_, i) => ({
           active: i % 4 === 0,
           note: 'C1',
-        })),
-        volume: 0.7,
-        muted: false,
-      },
-      snare: {
-        steps: new Array(32).fill(null).map((_, i) => ({
-          active: i % 8 === 4,
-          note: 'D2',
         })),
         volume: 0.6,
         muted: false,
       },
+      snare: {
+        steps: Array.from({ length: 64 }, (_, i) => ({
+          active: i % 8 === 6,
+          note: 'D2',
+        })),
+        volume: 0.5,
+        muted: false,
+      },
       hihat: {
-        steps: new Array(32).fill(null).map((_, i) => ({
+        steps: Array.from({ length: 64 }, (_, i) => ({
           active: i % 2 === 1,
           note: 'C3',
         })),
@@ -93,58 +97,60 @@ export const PRESETS: Preset[] = [
         muted: false,
       },
       bass: {
-        steps: new Array(32).fill(null).map((_, i) => ({
-          active: i % 4 === 0 || i % 4 === 2,
+        steps: Array.from({ length: 64 }, (_, i) => ({
+          active: i % 2 === 0,
           note:
-            i < 8
+            i < 16
               ? 'C2'
-              : i < 12
+              : i < 24
                 ? 'C2'
-                : i < 16
+                : i < 32
                   ? 'F2'
-                  : i < 20
+                  : i < 40
                     ? 'F2'
-                    : i < 24
+                    : i < 48
                       ? 'C2'
-                      : i < 28
+                      : i < 56
                         ? 'G2'
-                        : 'F2',
+                        : 'G2',
         })),
-        volume: 0.6,
+        volume: 0.8,
         muted: false,
       },
       piano: {
-        steps: new Array(32).fill(null).map((_, i) => ({
-          active: i % 4 === 1 || i % 4 === 3,
+        steps: Array.from({ length: 64 }, (_, i) => ({
+          active: i % 2 === 1,
           note:
-            i < 8
+            i < 16
               ? 'C'
-              : i < 12
+              : i < 24
                 ? 'C'
-                : i < 16
+                : i < 32
                   ? 'F'
-                  : i < 20
+                  : i < 40
                     ? 'F'
-                    : i < 24
+                    : i < 48
                       ? 'C'
-                      : i < 28
+                      : i < 56
                         ? 'G'
-                        : 'F',
+                        : 'C',
         })),
-        volume: 0.5,
+        volume: 0.7,
         muted: false,
       },
       pad: {
-        steps: new Array(32)
-          .fill(null)
-          .map(() => ({ active: false, note: 'C' })),
+        steps: Array.from({ length: 64 }, () => ({
+          active: false,
+          note: 'C',
+        })),
         volume: 0.3,
         muted: true,
       },
       lead: {
-        steps: new Array(32)
-          .fill(null)
-          .map(() => ({ active: false, note: 'C4' })),
+        steps: Array.from({ length: 64 }, () => ({
+          active: false,
+          note: 'C4',
+        })),
         volume: 0.4,
         muted: true,
       },
@@ -152,19 +158,20 @@ export const PRESETS: Preset[] = [
   },
   {
     name: 'Energetic Rock',
-    description: 'Driving rock rhythm for high-energy guitar playing',
-    bpm: 140,
+    description:
+      'Driving rock rhythm with powerful drums and energy - perfect for high-intensity guitar playing',
+    bpm: 145,
     tracks: {
       kick: {
-        steps: new Array(32).fill(null).map((_, i) => ({
-          active: i % 4 === 0 || i % 8 === 6,
+        steps: Array.from({ length: 64 }, (_, i) => ({
+          active: i % 8 === 0 || i % 16 === 6,
           note: 'C1',
         })),
         volume: 0.8,
         muted: false,
       },
       snare: {
-        steps: new Array(32).fill(null).map((_, i) => ({
+        steps: Array.from({ length: 64 }, (_, i) => ({
           active: i % 8 === 4,
           note: 'D2',
         })),
@@ -172,7 +179,7 @@ export const PRESETS: Preset[] = [
         muted: false,
       },
       hihat: {
-        steps: new Array(32).fill(null).map((_, i) => ({
+        steps: Array.from({ length: 64 }, (_, i) => ({
           active: true,
           note: 'C3',
         })),
@@ -180,34 +187,35 @@ export const PRESETS: Preset[] = [
         muted: false,
       },
       bass: {
-        steps: new Array(32).fill(null).map((_, i) => ({
+        steps: Array.from({ length: 64 }, (_, i) => ({
           active: i % 2 === 0,
-          note: i < 8 ? 'C2' : i < 16 ? 'A1' : i < 24 ? 'F2' : 'G2',
+          note: i < 16 ? 'C2' : i < 32 ? 'A1' : i < 48 ? 'F2' : 'G2',
         })),
-        volume: 0.7,
+        volume: 0.8,
         muted: false,
       },
       piano: {
-        steps: new Array(32)
-          .fill(null)
-          .map(() => ({ active: false, note: 'C' })),
+        steps: Array.from({ length: 64 }, () => ({
+          active: false,
+          note: 'C',
+        })),
         volume: 0.4,
         muted: true,
       },
       pad: {
-        steps: new Array(32).fill(null).map((_, i) => ({
+        steps: Array.from({ length: 64 }, (_, i) => ({
           active: i % 16 === 0,
-          note: i < 8 ? 'C' : i < 16 ? 'Am' : i < 24 ? 'F' : 'G',
+          note: i < 16 ? 'C' : i < 32 ? 'Am' : i < 48 ? 'F' : 'G',
         })),
-        volume: 0.4,
+        volume: 0.5,
         muted: false,
       },
       lead: {
-        steps: new Array(32).fill(null).map((_, i) => ({
+        steps: Array.from({ length: 64 }, (_, i) => ({
           active: i % 16 === 12,
-          note: i < 8 ? 'G4' : i < 16 ? 'C5' : i < 24 ? 'F4' : 'G4',
+          note: i < 16 ? 'G4' : i < 32 ? 'C5' : i < 48 ? 'F4' : 'G4',
         })),
-        volume: 0.5,
+        volume: 0.6,
         muted: false,
       },
     },

@@ -16,63 +16,63 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
     {
       id: 'kick',
       name: 'Kick',
-      steps: new Array(32)
+      steps: new Array(64)
         .fill(null)
         .map(() => ({ active: false, note: 'C1' })),
-      volume: 0.8,
+      volume: 0.6,
       muted: false,
       color: 'red',
     },
     {
       id: 'snare',
       name: 'Snare',
-      steps: new Array(32)
+      steps: new Array(64)
         .fill(null)
         .map(() => ({ active: false, note: 'C2' })),
-      volume: 0.7,
+      volume: 0.4,
       muted: false,
       color: 'orange',
     },
     {
       id: 'hihat',
       name: 'Hi-Hat',
-      steps: new Array(32)
+      steps: new Array(64)
         .fill(null)
         .map(() => ({ active: false, note: 'C3' })),
-      volume: 0.5,
+      volume: 0.3,
       muted: false,
       color: 'yellow',
     },
     {
       id: 'bass',
       name: 'Bass',
-      steps: new Array(32)
+      steps: new Array(64)
         .fill(null)
         .map(() => ({ active: false, note: 'E2' })),
-      volume: 0.6,
+      volume: 0.5,
       muted: false,
       color: 'blue',
     },
     {
       id: 'piano',
       name: 'Piano',
-      steps: new Array(32).fill(null).map(() => ({ active: false, note: 'C' })),
-      volume: 0.5,
+      steps: new Array(64).fill(null).map(() => ({ active: false, note: 'C' })),
+      volume: 0.4,
       muted: false,
       color: 'purple',
     },
     {
       id: 'pad',
       name: 'Pad',
-      steps: new Array(32).fill(null).map(() => ({ active: false, note: 'C' })),
-      volume: 0.4,
+      steps: new Array(64).fill(null).map(() => ({ active: false, note: 'C' })),
+      volume: 0.3,
       muted: false,
       color: 'green',
     },
     {
       id: 'lead',
       name: 'Lead',
-      steps: new Array(32)
+      steps: new Array(64)
         .fill(null)
         .map(() => ({ active: false, note: 'C4' })),
       volume: 0.4,
@@ -84,7 +84,8 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState<number>(-1);
   const [bpm, setBpm] = useState<number>(120);
-  const [masterVolume, setMasterVolume] = useState<number>(0.7);
+  const [masterVolume, setMasterVolume] = useState<number>(0.5); // Lower default volume for mellow sound
+
   const [selectedPreset, setSelectedPreset] = useState<string>('');
 
   const sequenceRef = useRef<Tone.Sequence | null>(null);
@@ -96,7 +97,13 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
   const padSynthRef = useRef<Tone.PolySynth | null>(null);
   const leadSynthRef = useRef<Tone.MonoSynth | null>(null);
   const masterVolumeRef = useRef<Tone.Volume | null>(null);
-  const reverbRef = useRef<Tone.Reverb | null>(null);
+  const mainReverbRef = useRef<Tone.Reverb | null>(null);
+  const drumReverbRef = useRef<Tone.Reverb | null>(null);
+  const leadReverbRef = useRef<Tone.Reverb | null>(null);
+  const delayRef = useRef<Tone.PingPongDelay | null>(null);
+  const chorusRef = useRef<Tone.Chorus | null>(null);
+  const compressorRef = useRef<Tone.Compressor | null>(null);
+  const autoFilterRef = useRef<Tone.AutoFilter | null>(null);
   const tracksRef = useRef<Track[]>(tracks);
 
   // Use the audio playback hook
@@ -110,99 +117,182 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
     leadSynthRef,
   });
 
-  // Initialize Tone.js instruments
+  // Initialize Tone.js instruments with Bon Iver-style effects
   useEffect(() => {
     const initTone = async () => {
       try {
-        // Create reverb effect for pads and piano
-        reverbRef.current = new Tone.Reverb({
-          decay: 3,
-          preDelay: 0.1,
-          wet: 0.3,
-        }).toDestination();
+        // Create Bon Iver-style effect chain
+        delayRef.current = new Tone.PingPongDelay('8n', 0.3).toDestination();
+        chorusRef.current = new Tone.Chorus(4, 2.5, 0.5).toDestination();
+        compressorRef.current = new Tone.Compressor(-30, 3).toDestination();
+        autoFilterRef.current = new Tone.AutoFilter('4n').toDestination();
+        autoFilterRef.current.start();
+
+        // Create multiple reverb effects for different instruments
+        mainReverbRef.current = new Tone.Reverb({
+          decay: 6,
+          preDelay: 0.3,
+          wet: 0.6,
+        }).connect(delayRef.current);
+
+        drumReverbRef.current = new Tone.Reverb({
+          decay: 2.5,
+          preDelay: 0.08,
+          wet: 0.4,
+        }).connect(compressorRef.current);
+
+        leadReverbRef.current = new Tone.Reverb({
+          decay: 4,
+          preDelay: 0.15,
+          wet: 0.5,
+        }).connect(chorusRef.current);
 
         // Create master volume control
         masterVolumeRef.current = new Tone.Volume(
           Tone.gainToDb(masterVolume)
         ).toDestination();
 
-        // Create kick drum synth
+        // Create warm, filtered kick drum with Bon Iver processing
         kickSynthRef.current = new Tone.MembraneSynth({
-          pitchDecay: 0.05,
-          octaves: 10,
+          pitchDecay: 0.2,
+          octaves: 4,
           oscillator: {
             type: 'sine',
           },
           envelope: {
-            attack: 0.001,
-            decay: 0.3,
-            sustain: 0.01,
-            release: 1.2,
+            attack: 0.02,
+            decay: 1.2,
+            sustain: 0.03,
+            release: 2.5,
           },
-        }).connect(masterVolumeRef.current);
-        kickSynthRef.current.volume.value = 3;
+        });
 
-        // Create snare drum synth
+        // Add filter and connect to effects chain
+        const kickFilter = new Tone.Filter(120, 'lowpass').connect(
+          drumReverbRef.current
+        );
+        kickSynthRef.current.connect(kickFilter);
+        kickSynthRef.current.volume.value = -8;
+
+        // Create soft, filtered snare with ethereal processing
         snareSynthRef.current = new Tone.NoiseSynth({
-          noise: { type: 'white' },
+          noise: { type: 'pink' },
           envelope: {
-            attack: 0.005,
-            decay: 0.1,
+            attack: 0.02,
+            decay: 0.4,
             sustain: 0.0,
-            release: 0.1,
-          },
-        }).connect(masterVolumeRef.current);
-        snareSynthRef.current.volume.value = 0;
-
-        // Create hi-hat synth
-        hihatSynthRef.current = new Tone.MetalSynth({
-          envelope: {
-            attack: 0.001,
-            decay: 0.1,
-            release: 0.01,
-          },
-          harmonicity: 5.1,
-          modulationIndex: 32,
-          resonance: 4000,
-          octaves: 1.5,
-        }).connect(masterVolumeRef.current);
-        hihatSynthRef.current.volume.value = -10;
-
-        // Create bass synth
-        bassSynthRef.current = new Tone.MonoSynth({
-          oscillator: { type: 'sawtooth' },
-          envelope: { attack: 0.05, decay: 0.3, sustain: 0.4, release: 0.8 },
-          filterEnvelope: {
-            attack: 0.1,
-            decay: 0.2,
-            sustain: 0.5,
             release: 0.8,
           },
-        }).connect(masterVolumeRef.current);
+        });
 
-        // Create piano synth with reverb
+        const snareFilter = new Tone.Filter(3000, 'lowpass').connect(
+          drumReverbRef.current
+        );
+        snareSynthRef.current.connect(snareFilter);
+        snareSynthRef.current.volume.value = -12;
+
+        // Create soft, filtered hi-hat with dreamy processing
+        hihatSynthRef.current = new Tone.MetalSynth({
+          envelope: {
+            attack: 0.008,
+            decay: 0.15,
+            release: 0.08,
+          },
+          harmonicity: 2.5,
+          modulationIndex: 12,
+          resonance: 1500,
+          octaves: 0.8,
+        });
+
+        const hihatFilter = new Tone.Filter(8000, 'lowpass').connect(
+          drumReverbRef.current
+        );
+        hihatSynthRef.current.connect(hihatFilter);
+        hihatSynthRef.current.volume.value = -18;
+
+        // Create warm, Bon Iver-style bass with filter and delay
+        bassSynthRef.current = new Tone.MonoSynth({
+          oscillator: { type: 'sine' },
+          envelope: { attack: 0.08, decay: 0.6, sustain: 0.7, release: 1.2 },
+          filterEnvelope: {
+            attack: 0.15,
+            decay: 0.4,
+            sustain: 0.8,
+            release: 1.0,
+          },
+          filter: {
+            Q: 0.8,
+            frequency: 800,
+          },
+        });
+
+        const bassFilter = new Tone.Filter(1200, 'lowpass').connect(
+          mainReverbRef.current
+        );
+        bassSynthRef.current.connect(bassFilter);
+        bassSynthRef.current.volume.value = 1;
+
+        // Create dreamy Bon Iver piano with heavy filtering and delay
         pianoSynthRef.current = new Tone.PolySynth(Tone.Synth, {
-          oscillator: { type: 'triangle' },
-          envelope: { attack: 0.02, decay: 0.3, sustain: 0.4, release: 0.8 },
-        }).connect(reverbRef.current);
+          oscillator: {
+            type: 'sine',
+          },
+          envelope: {
+            attack: 0.08,
+            decay: 0.6,
+            sustain: 0.4,
+            release: 2.5,
+          },
+        });
 
-        // Create pad synth with reverb
+        // Piano gets the full Bon Iver treatment: filter -> chorus -> delay -> reverb
+        const pianoFilter = new Tone.Filter(1800, 'lowpass');
+        const pianoChorus = new Tone.Chorus(2, 3, 0.3);
+        const pianoDelay = new Tone.PingPongDelay('8n.', 0.25);
+
+        pianoSynthRef.current
+          .connect(pianoFilter)
+          .connect(pianoChorus)
+          .connect(pianoDelay)
+          .connect(mainReverbRef.current);
+
+        pianoSynthRef.current.volume.value = -5;
+
+        // Create lush, ethereal pad with heavy Bon Iver processing
         padSynthRef.current = new Tone.PolySynth(Tone.Synth, {
           oscillator: { type: 'sine' },
-          envelope: { attack: 0.1, decay: 0.3, sustain: 0.7, release: 0.8 },
-        }).connect(reverbRef.current);
+          envelope: { attack: 0.8, decay: 1.0, sustain: 0.9, release: 4.0 },
+        });
 
-        // Create lead synth
+        // Pad gets auto-filter and heavy effects
+        padSynthRef.current
+          .connect(autoFilterRef.current)
+          .connect(chorusRef.current)
+          .connect(mainReverbRef.current);
+
+        padSynthRef.current.volume.value = -10;
+
+        // Create smooth, Bon Iver lead with filter and chorus
         leadSynthRef.current = new Tone.MonoSynth({
-          oscillator: { type: 'sawtooth' },
-          envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.5 },
+          oscillator: { type: 'triangle' },
+          envelope: { attack: 0.1, decay: 0.5, sustain: 0.6, release: 1.5 },
           filterEnvelope: {
-            attack: 0.01,
-            decay: 0.1,
-            sustain: 0.8,
-            release: 0.5,
+            attack: 0.08,
+            decay: 0.4,
+            sustain: 0.7,
+            release: 1.2,
           },
-        }).connect(masterVolumeRef.current);
+          filter: {
+            Q: 0.6,
+            frequency: 2000,
+          },
+        });
+
+        const leadFilter = new Tone.Filter(3000, 'lowpass').connect(
+          leadReverbRef.current
+        );
+        leadSynthRef.current.connect(leadFilter);
+        leadSynthRef.current.volume.value = -8;
       } catch (error) {
         console.error('Failed to initialize Tone.js:', error);
       }
@@ -220,7 +310,13 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
       pianoSynthRef.current?.dispose();
       padSynthRef.current?.dispose();
       leadSynthRef.current?.dispose();
-      reverbRef.current?.dispose();
+      mainReverbRef.current?.dispose();
+      drumReverbRef.current?.dispose();
+      leadReverbRef.current?.dispose();
+      delayRef.current?.dispose();
+      chorusRef.current?.dispose();
+      compressorRef.current?.dispose();
+      autoFilterRef.current?.dispose();
       masterVolumeRef.current?.dispose();
     };
   }, []);
@@ -232,7 +328,7 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
     }
   }, [masterVolume]);
 
-  // Keep tracksRef in sync and update synth volumes
+  // Keep tracksRef in sync and update synth volumes (with mellow adjustments)
   useEffect(() => {
     tracksRef.current = tracks;
 
@@ -242,38 +338,42 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
         case 'kick':
           if (kickSynthRef.current) {
             kickSynthRef.current.volume.value =
-              6 + Tone.gainToDb(track.volume * 2);
+              -8 + Tone.gainToDb(track.volume);
           }
           break;
         case 'snare':
           if (snareSynthRef.current) {
-            snareSynthRef.current.volume.value = Tone.gainToDb(track.volume);
+            snareSynthRef.current.volume.value =
+              -12 + Tone.gainToDb(track.volume);
           }
           break;
         case 'hihat':
           if (hihatSynthRef.current) {
             hihatSynthRef.current.volume.value =
-              -10 + Tone.gainToDb(track.volume);
+              -18 + Tone.gainToDb(track.volume);
           }
           break;
         case 'bass':
           if (bassSynthRef.current) {
-            bassSynthRef.current.volume.value = Tone.gainToDb(track.volume);
+            bassSynthRef.current.volume.value = 1 + Tone.gainToDb(track.volume);
           }
           break;
         case 'piano':
           if (pianoSynthRef.current) {
-            pianoSynthRef.current.volume.value = Tone.gainToDb(track.volume);
+            pianoSynthRef.current.volume.value =
+              -5 + Tone.gainToDb(track.volume);
           }
           break;
         case 'pad':
           if (padSynthRef.current) {
-            padSynthRef.current.volume.value = Tone.gainToDb(track.volume);
+            padSynthRef.current.volume.value =
+              -10 + Tone.gainToDb(track.volume);
           }
           break;
         case 'lead':
           if (leadSynthRef.current) {
-            leadSynthRef.current.volume.value = Tone.gainToDb(track.volume);
+            leadSynthRef.current.volume.value =
+              -8 + Tone.gainToDb(track.volume);
           }
           break;
       }
@@ -337,41 +437,41 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
   );
 
   const updateTrackVolume = useCallback((trackId: string, volume: number) => {
-    // Update synth volume immediately
+    // Update synth volume immediately with mellow adjustments
     switch (trackId) {
       case 'kick':
         if (kickSynthRef.current) {
-          kickSynthRef.current.volume.value = 6 + Tone.gainToDb(volume * 2);
+          kickSynthRef.current.volume.value = -8 + Tone.gainToDb(volume);
         }
         break;
       case 'snare':
         if (snareSynthRef.current) {
-          snareSynthRef.current.volume.value = Tone.gainToDb(volume);
+          snareSynthRef.current.volume.value = -12 + Tone.gainToDb(volume);
         }
         break;
       case 'hihat':
         if (hihatSynthRef.current) {
-          hihatSynthRef.current.volume.value = -10 + Tone.gainToDb(volume);
+          hihatSynthRef.current.volume.value = -18 + Tone.gainToDb(volume);
         }
         break;
       case 'bass':
         if (bassSynthRef.current) {
-          bassSynthRef.current.volume.value = Tone.gainToDb(volume);
+          bassSynthRef.current.volume.value = 1 + Tone.gainToDb(volume);
         }
         break;
       case 'piano':
         if (pianoSynthRef.current) {
-          pianoSynthRef.current.volume.value = Tone.gainToDb(volume);
+          pianoSynthRef.current.volume.value = -5 + Tone.gainToDb(volume);
         }
         break;
       case 'pad':
         if (padSynthRef.current) {
-          padSynthRef.current.volume.value = Tone.gainToDb(volume);
+          padSynthRef.current.volume.value = -10 + Tone.gainToDb(volume);
         }
         break;
       case 'lead':
         if (leadSynthRef.current) {
-          leadSynthRef.current.volume.value = Tone.gainToDb(volume);
+          leadSynthRef.current.volume.value = -8 + Tone.gainToDb(volume);
         }
         break;
     }
@@ -416,7 +516,7 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
 
     Tone.Transport.bpm.value = bpm;
 
-    // Create a sequence
+    // Create a sequence with 64 steps
     sequenceRef.current = new Tone.Sequence(
       (time, step) => {
         // Update UI on the next animation frame
@@ -492,7 +592,7 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
           }
         });
       },
-      Array.from({ length: 32 }, (_, i) => i),
+      Array.from({ length: 64 }, (_, i) => i), // Changed to 64 steps
       '16n'
     );
 
@@ -551,7 +651,7 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
 
       setSelectedPreset(presetName);
     },
-    [isPlaying, stopSequencer]
+    [isPlaying]
   );
 
   return (
@@ -647,20 +747,36 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
         </div>
       </div>
 
-      {/* Step position indicator */}
-      <div className="flex gap-1 mb-6">
-        {Array.from({ length: 32 }, (_, index) => (
-          <div
-            key={index}
-            className={`flex-1 h-2 rounded-full transition-all duration-150 ${
-              currentStep === index && isPlaying
-                ? 'bg-yellow-400'
-                : index % 4 === 0
-                  ? 'bg-red-300'
-                  : 'bg-gray-300'
-            }`}
-          />
-        ))}
+      {/* Step position indicator - now 64 steps in 4 rows */}
+      <div className="mb-6">
+        <h4 className="text-sm font-medium text-gray-700 mb-2">
+          Step Position
+        </h4>
+        <div className="grid grid-rows-4 gap-1">
+          {Array.from({ length: 4 }, (_, rowIndex) => (
+            <div key={rowIndex} className="flex gap-1">
+              {Array.from({ length: 16 }, (_, colIndex) => {
+                const stepIndex = rowIndex * 16 + colIndex;
+                return (
+                  <div
+                    key={stepIndex}
+                    className={`flex-1 h-3 rounded-full transition-all duration-150 ${
+                      currentStep === stepIndex && isPlaying
+                        ? 'bg-yellow-400'
+                        : stepIndex % 4 === 0
+                          ? 'bg-red-300'
+                          : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className="block text-xs text-center text-gray-600 leading-3">
+                      {stepIndex + 1}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Tracks */}
@@ -695,46 +811,64 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
             </div>
           </div>
 
-          {/* Track steps */}
-          <div className="flex gap-1 mb-3">
-            {track.steps.map((step, stepIndex) => (
-              <div
-                key={stepIndex}
-                className="flex-1 flex flex-col items-center"
-              >
-                <button
-                  onClick={() => toggleStep(track.id, stepIndex)}
-                  className={`
-                    w-full h-8 rounded border-2 transition-all duration-150 text-xs font-bold flex flex-col items-center justify-center
-                    ${getTrackColorClasses(track.color, step.active, track.muted)}
-                    ${currentStep === stepIndex && isPlaying ? 'ring-2 ring-yellow-400 scale-110' : ''}
-                  `}
-                >
-                  <span className="text-xs leading-none">{stepIndex + 1}</span>
-                  {step.active && (
-                    <span className="text-xs leading-none font-normal opacity-75">
-                      {step.note}
-                    </span>
-                  )}
-                </button>
-                {step.active && (
-                  <select
-                    value={step.note}
-                    onChange={e =>
-                      updateStepNote(track.id, stepIndex, e.target.value)
-                    }
-                    className="mt-1 text-xs border rounded px-1 py-0.5 w-full text-center bg-white"
-                    onClick={e => e.stopPropagation()}
-                  >
-                    {getNotesForTrack(track.id).map(note => (
-                      <option key={note} value={note}>
-                        {note}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            ))}
+          {/* Track steps - now 64 steps in 4 rows */}
+          <div className="mb-3">
+            <div className="grid grid-rows-4 gap-2">
+              {Array.from({ length: 4 }, (_, rowIndex) => (
+                <div key={rowIndex} className="flex gap-1">
+                  {Array.from({ length: 16 }, (_, colIndex) => {
+                    const stepIndex = rowIndex * 16 + colIndex;
+                    const step = track.steps[stepIndex];
+                    return (
+                      <div
+                        key={stepIndex}
+                        className="flex-1 flex flex-col items-center"
+                      >
+                        <button
+                          onClick={() => toggleStep(track.id, stepIndex)}
+                          className={`
+                            w-full h-8 rounded border-2 transition-all duration-150 text-xs font-bold flex flex-col items-center justify-center
+                            ${getTrackColorClasses(track.color, step.active, track.muted)}
+                            ${currentStep === stepIndex && isPlaying ? 'ring-2 ring-yellow-400 scale-105' : ''}
+                          `}
+                        >
+                          <span className="text-xs leading-none">
+                            {stepIndex + 1}
+                          </span>
+                          {step.active && (
+                            <span className="text-xs leading-none font-normal opacity-75">
+                              {step.note.length > 2
+                                ? step.note.substring(0, 2)
+                                : step.note}
+                            </span>
+                          )}
+                        </button>
+                        {step.active && (
+                          <select
+                            value={step.note}
+                            onChange={e =>
+                              updateStepNote(
+                                track.id,
+                                stepIndex,
+                                e.target.value
+                              )
+                            }
+                            className="mt-1 text-xs border rounded px-1 py-0.5 w-full text-center bg-white"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            {getNotesForTrack(track.id).map(note => (
+                              <option key={note} value={note}>
+                                {note}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Track volume */}

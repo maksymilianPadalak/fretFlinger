@@ -160,13 +160,25 @@ export const getTrackColorClasses = (
   );
 };
 
-// Audio synthesis initialization
+// Audio synthesis initialization - MELLOW VERSION
 export const initializeAudio = async () => {
   const masterVolume = 0.7;
 
-  // Create reverb effect for pads and piano
-  const reverb = new Tone.Reverb({
-    decay: 3,
+  // Create multiple reverb effects for different instruments
+  const mainReverb = new Tone.Reverb({
+    decay: 4,
+    preDelay: 0.2,
+    wet: 0.4,
+  }).toDestination();
+
+  const drumReverb = new Tone.Reverb({
+    decay: 1.5,
+    preDelay: 0.05,
+    wet: 0.2,
+  }).toDestination();
+
+  const leadReverb = new Tone.Reverb({
+    decay: 2,
     preDelay: 0.1,
     wet: 0.3,
   }).toDestination();
@@ -176,83 +188,104 @@ export const initializeAudio = async () => {
     Tone.gainToDb(masterVolume)
   ).toDestination();
 
-  // Create kick drum synth
+  // Create mellow kick drum synth with reverb
   const kickSynth = new Tone.MembraneSynth({
-    pitchDecay: 0.05,
-    octaves: 10,
+    pitchDecay: 0.1,
+    octaves: 6,
     oscillator: {
       type: 'sine',
     },
     envelope: {
-      attack: 0.001,
-      decay: 0.3,
-      sustain: 0.01,
-      release: 1.2,
-    },
-  }).connect(masterVolumeNode);
-  kickSynth.volume.value = 3;
-
-  // Create snare drum synth
-  const snareSynth = new Tone.NoiseSynth({
-    noise: { type: 'white' },
-    envelope: {
-      attack: 0.005,
-      decay: 0.1,
-      sustain: 0.0,
-      release: 0.1,
-    },
-  }).connect(masterVolumeNode);
-  snareSynth.volume.value = 0;
-
-  // Create hi-hat synth
-  const hihatSynth = new Tone.MetalSynth({
-    envelope: {
-      attack: 0.001,
-      decay: 0.1,
-      release: 0.01,
-    },
-    harmonicity: 5.1,
-    modulationIndex: 32,
-    resonance: 4000,
-    octaves: 1.5,
-  }).connect(masterVolumeNode);
-  hihatSynth.volume.value = -10;
-
-  // Create bass synth
-  const bassSynth = new Tone.MonoSynth({
-    oscillator: { type: 'sawtooth' },
-    envelope: { attack: 0.05, decay: 0.3, sustain: 0.4, release: 0.8 },
-    filterEnvelope: {
-      attack: 0.1,
-      decay: 0.2,
-      sustain: 0.5,
-      release: 0.8,
-    },
-  }).connect(masterVolumeNode);
-
-  // Create piano synth with reverb
-  const pianoSynth = new Tone.PolySynth(Tone.Synth, {
-    oscillator: { type: 'triangle' },
-    envelope: { attack: 0.02, decay: 0.3, sustain: 0.4, release: 0.8 },
-  }).connect(reverb);
-
-  // Create pad synth with reverb
-  const padSynth = new Tone.PolySynth(Tone.Synth, {
-    oscillator: { type: 'sine' },
-    envelope: { attack: 0.1, decay: 0.3, sustain: 0.7, release: 0.8 },
-  }).connect(reverb);
-
-  // Create lead synth
-  const leadSynth = new Tone.MonoSynth({
-    oscillator: { type: 'sawtooth' },
-    envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.5 },
-    filterEnvelope: {
       attack: 0.01,
-      decay: 0.1,
-      sustain: 0.8,
+      decay: 0.8,
+      sustain: 0.05,
+      release: 2.0,
+    },
+  }).connect(drumReverb);
+  kickSynth.volume.value = -5; // Much quieter and mellower
+
+  // Create soft snare drum synth with reverb
+  const snareSynth = new Tone.NoiseSynth({
+    noise: { type: 'pink' }, // Pink noise is softer than white
+    envelope: {
+      attack: 0.01,
+      decay: 0.3,
+      sustain: 0.0,
       release: 0.5,
     },
-  }).connect(masterVolumeNode);
+  }).connect(drumReverb);
+  snareSynth.volume.value = -8; // Very quiet
+
+  // Create soft hi-hat synth with reverb
+  const hihatSynth = new Tone.MetalSynth({
+    envelope: {
+      attack: 0.005,
+      decay: 0.2,
+      release: 0.1,
+    },
+    harmonicity: 3.1,
+    modulationIndex: 16,
+    resonance: 2000,
+    octaves: 1,
+  }).connect(drumReverb);
+  hihatSynth.volume.value = -15; // Very quiet and soft
+
+  // Create prominent warm bass synth with slight reverb - LOUDER!
+  const bassSynth = new Tone.MonoSynth({
+    oscillator: { type: 'sine' }, // Sine wave for warmth
+    envelope: { attack: 0.05, decay: 0.4, sustain: 0.8, release: 1.0 }, // Punchier attack, longer sustain
+    filterEnvelope: {
+      attack: 0.1,
+      decay: 0.3,
+      sustain: 0.9,
+      release: 1.0,
+    },
+    filter: {
+      Q: 1.5,
+      frequency: 1200, // Higher cutoff for more presence
+    },
+  }).connect(mainReverb);
+  bassSynth.volume.value = 3; // Much louder!
+
+  // Create realistic piano synth with lots of reverb - PIANO-LIKE!
+  const pianoSynth = new Tone.PolySynth(Tone.Synth, {
+    oscillator: {
+      type: 'fmsquare', // FM square wave for piano-like harmonics
+      modulationType: 'triangle',
+      modulationIndex: 2,
+    },
+    envelope: {
+      attack: 0.01, // Quick attack like real piano
+      decay: 0.2,
+      sustain: 0.3, // Lower sustain for more realistic decay
+      release: 1.5,
+    },
+  }).connect(mainReverb);
+  pianoSynth.volume.value = -2; // Louder and more present
+
+  // Create lush pad synth with heavy reverb
+  const padSynth = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'sine' },
+    envelope: { attack: 0.5, decay: 0.8, sustain: 0.8, release: 3.0 }, // Very slow attack for pad-like feel
+  }).connect(mainReverb);
+  padSynth.volume.value = -8;
+
+  // Create smooth lead synth with reverb
+  const leadSynth = new Tone.MonoSynth({
+    oscillator: { type: 'triangle' }, // Triangle for smooth sound
+    envelope: { attack: 0.05, decay: 0.4, sustain: 0.5, release: 1.0 },
+    filterEnvelope: {
+      attack: 0.05,
+      decay: 0.3,
+      sustain: 0.9,
+      release: 1.0,
+    },
+    filter: {
+      Q: 1,
+      frequency: 1200, // Gentle filtering
+    },
+  }).connect(leadReverb);
+  leadSynth.volume.value = -5;
 
   return {
     kickSynth,
@@ -263,7 +296,9 @@ export const initializeAudio = async () => {
     padSynth,
     leadSynth,
     masterVolumeNode,
-    reverb,
+    mainReverb,
+    drumReverb,
+    leadReverb,
   };
 };
 
