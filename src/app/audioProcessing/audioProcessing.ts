@@ -11,7 +11,9 @@ const getGuitar = () => {
 let audioContext: AudioContext | null = null;
 let sourceNode: MediaStreamAudioSourceNode | null = null;
 
-const setupContext = async (contextRef: React.RefObject<AudioContext>) => {
+const setupContext = async (
+  contextRef: React.RefObject<AudioContext>
+): Promise<boolean> => {
   try {
     const guitar = await getGuitar();
     const context = new AudioContext();
@@ -20,8 +22,10 @@ const setupContext = async (contextRef: React.RefObject<AudioContext>) => {
     contextRef.current = context;
     audioContext = context;
     sourceNode = source;
+    return true;
   } catch (error) {
     console.error('Error setting up audio context:', error);
+    return false;
   }
 };
 

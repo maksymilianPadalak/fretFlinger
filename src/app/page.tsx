@@ -18,11 +18,28 @@ export default function Home() {
   const contextRef = useRef<AudioContext>(null!);
   const [recording, setRecording] = useState(false);
   const [hasRecordedAudio, setHasRecordedAudio] = useState(false);
+  const [audioReady, setAudioReady] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (contextRef !== null) {
-      setupContext(contextRef);
-    }
+    const initializeAudio = async () => {
+      try {
+        setIsLoading(true);
+        if (contextRef !== null) {
+          const success = await setupContext(contextRef);
+          if (success) {
+            setAudioReady(true);
+          }
+          // If not successful, audioReady remains false and error state will be shown
+        }
+      } catch (error) {
+        console.error('Failed to initialize audio:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAudio();
 
     return () => {
       if (contextRef.current) {
@@ -60,12 +77,35 @@ export default function Home() {
           Guitar Audio Processor
         </h1>
 
-        <AudioVisualizer
-          ref={visualizerRef}
-          audioContext={getAudioContext()}
-          sourceNode={getSourceNode()}
-          isRecording={recording}
-        />
+        {isLoading ? (
+          <div className="w-full h-32 my-4 bg-gray-100 rounded border flex items-center justify-center">
+            <div className="text-center text-gray-500">
+              <div className="flex items-center justify-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div>
+                <span className="text-sm">Requesting microphone access...</span>
+              </div>
+              <div className="text-xs mt-2">
+                Please allow microphone access when prompted
+              </div>
+            </div>
+          </div>
+        ) : audioReady ? (
+          <AudioVisualizer
+            ref={visualizerRef}
+            audioContext={getAudioContext()}
+            sourceNode={getSourceNode()}
+            isRecording={recording}
+          />
+        ) : (
+          <div className="w-full h-32 my-4 bg-gray-100 rounded border flex items-center justify-center">
+            <div className="text-center text-gray-500">
+              <div className="text-sm">Microphone access denied</div>
+              <div className="text-xs mt-1">
+                Please allow microphone access and refresh the page
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-4">
           <button
