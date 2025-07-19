@@ -7,4 +7,9 @@ export {
   hasRecording,
   getAudioContext,
   getSourceNode,
+  getRecordingDuration,
+  getRecordingSize,
+  formatDuration,
+  formatSize,
+  waitForRecordingProcessing,
 } from './audioProcessing';

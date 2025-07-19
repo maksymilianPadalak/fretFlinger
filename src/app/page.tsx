@@ -10,6 +10,11 @@ import {
   hasRecording,
   getAudioContext,
   getSourceNode,
+  getRecordingDuration,
+  getRecordingSize,
+  formatDuration,
+  formatSize,
+  waitForRecordingProcessing,
 } from './audioProcessing';
 import AudioVisualizer from './components/AudioVisualizer';
 
@@ -20,6 +25,11 @@ export default function Home() {
   const [hasRecordedAudio, setHasRecordedAudio] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [recordingInfo, setRecordingInfo] = useState<{
+    duration: string;
+    size: string;
+  } | null>(null);
+  const [loadingRecordingInfo, setLoadingRecordingInfo] = useState(false);
 
   useEffect(() => {
     const initializeAudio = async () => {
@@ -54,11 +64,34 @@ export default function Home() {
       if (stopped) {
         setRecording(false);
         setHasRecordedAudio(true);
+        setLoadingRecordingInfo(true);
+        setRecordingInfo(null);
+
+        try {
+          // Wait for the recording processing to complete (no timeout!)
+          await waitForRecordingProcessing();
+
+          const duration = await getRecordingDuration();
+          const size = getRecordingSize();
+
+          if (duration !== null && size !== null) {
+            setRecordingInfo({
+              duration: formatDuration(duration),
+              size: formatSize(size),
+            });
+          }
+        } catch (error) {
+          console.error('Error getting recording info:', error);
+        } finally {
+          setLoadingRecordingInfo(false);
+        }
       }
     } else {
       const started = await startRecording();
       if (started) {
         setRecording(true);
+        setRecordingInfo(null);
+        setLoadingRecordingInfo(false);
       }
     }
   };
@@ -132,6 +165,44 @@ export default function Home() {
             Play
           </button>
         </div>
+
+        {loadingRecordingInfo && (
+          <div className="mt-4 p-4 bg-gray-50 rounded border">
+            <div className="flex items-center justify-center space-x-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-500"></div>
+              <span className="text-sm text-gray-600">
+                Calculating duration...
+              </span>
+            </div>
+          </div>
+        )}
+
+        {recordingInfo && (
+          <div className="mt-4 p-4 bg-gray-50 rounded border">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <div className="text-sm text-gray-600">
+                  Duration:{' '}
+                  <span className="font-medium text-gray-900">
+                    {recordingInfo.duration}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  Size:{' '}
+                  <span className="font-medium text-gray-900">
+                    {recordingInfo.size}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={handlePlayClick}
+                className="px-4 py-2 bg-blue-500 text-white rounded font-medium hover:bg-blue-600 transition-colors"
+              >
+                Play Recording
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="text-center text-sm text-gray-500 mt-4">
           {recording
