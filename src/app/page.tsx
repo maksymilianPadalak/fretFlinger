@@ -18,6 +18,7 @@ import {
 } from './audioProcessing';
 import AudioVisualizer from './components/AudioVisualizer';
 import NotePlayer from './components/NotePlayer';
+import Sequencer from './components/Sequencer';
 
 export default function Home() {
   const visualizerRef = useRef<HTMLDivElement>(null);
@@ -217,9 +218,10 @@ export default function Home() {
                 : 'Click Record to start'}
           </div>
         </div>
-
-        {/* Note Player Section */}
-        <NotePlayer />
+        Note Player Section
+        {/* <NotePlayer /> */}
+        {/* Sequencer Section */}
+        <Sequencer />
       </div>
     </main>
   );
