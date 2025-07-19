@@ -51,59 +51,44 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center p-8">
-      <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 max-w-md w-full">
-        <h1 className="text-4xl font-black text-center tracking-tight leading-none text-white mb-8">
+    <main className="min-h-screen bg-white flex items-center justify-center p-2">
+      <div className="max-w-sm w-full ">
+        <h1 className="text-2xl font-medium text-center text-gray-900">
           Guitar Audio Processor
         </h1>
 
         <div
           ref={visualizerRef}
           id="visualizer"
-          className="w-full h-32 bg-black/20 rounded-lg border border-white/20 mb-6"
+          className="w-full h-24 my-4 bg-gray-100 rounded border"
         />
 
-        <div className="flex gap-6 justify-center">
+        <div className="flex gap-4">
           <button
             onClick={handleRecordClick}
-            className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 hover:scale-105 active:scale-95 ${
+            className={`flex-1 py-3 px-4 rounded font-medium transition-colors ${
               recording
-                ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg'
-                : 'bg-purple-500 hover:bg-purple-600 text-white shadow-lg'
+                ? 'bg-red-500 text-white hover:bg-red-600'
+                : 'bg-gray-900 text-white hover:bg-gray-800'
             }`}
           >
-            <div className="flex items-center gap-3">
-              {recording ? (
-                <>
-                  <div className="w-4 h-4 bg-white rounded-full animate-pulse"></div>
-                  <span>Stop Recording</span>
-                </>
-              ) : (
-                <>
-                  <div className="w-4 h-4 bg-white rounded-full"></div>
-                  <span>Record</span>
-                </>
-              )}
-            </div>
+            {recording ? 'Stop' : 'Record'}
           </button>
 
           <button
             onClick={handlePlayClick}
             disabled={!hasRecordedAudio}
-            className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 hover:scale-105 active:scale-95 ${
+            className={`flex-1 py-3 px-4 rounded font-medium transition-colors ${
               hasRecordedAudio
-                ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg'
-                : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                ? 'bg-gray-900 text-white hover:bg-gray-800'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
-            <div className="flex items-center gap-3">
-              <div className="w-4 h-4 bg-white rounded-full"></div>
-              <span>Play</span>
-            </div>
+            Play
           </button>
         </div>
 
-        <div className="mt-4 text-center text-white/80">
+        <div className="text-center text-sm text-gray-500 mt-4">
           {recording
             ? 'Recording...'
             : hasRecordedAudio
