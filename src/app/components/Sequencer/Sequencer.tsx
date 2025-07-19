@@ -7,18 +7,26 @@ interface SequencerProps {
   className?: string;
 }
 
+interface Step {
+  active: boolean;
+  note: string;
+}
+
 const Sequencer: React.FC<SequencerProps> = ({ className = '' }) => {
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
-  const [steps, setSteps] = useState<boolean[]>(new Array(16).fill(false));
+  const [steps, setSteps] = useState<Step[]>(
+    new Array(16).fill(null).map(() => ({ active: false, note: 'c3' }))
+  );
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState<number>(-1);
   const [bpm, setBpm] = useState<number>(120);
   const [volume, setVolume] = useState<number>(0.5);
+  const [selectedNote, setSelectedNote] = useState<string>('c3');
 
   const gainNodeRef = useRef<GainNode | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
-  const stepsRef = useRef<boolean[]>(steps);
+  const stepsRef = useRef<Step[]>(steps);
 
   // Initialize audio context
   useEffect(() => {
@@ -127,8 +135,8 @@ const Sequencer: React.FC<SequencerProps> = ({ className = '' }) => {
         setCurrentStep(stepIndex);
 
         // Use the ref to get the current steps (real-time updates)
-        if (stepsRef.current[stepIndex]) {
-          playNote('c3', stepDuration * 0.8); // Play for 80% of step duration
+        if (stepsRef.current[stepIndex].active) {
+          playNote(stepsRef.current[stepIndex].note, stepDuration * 0.8); // Play for 80% of step duration
         }
       };
 
@@ -146,25 +154,45 @@ const Sequencer: React.FC<SequencerProps> = ({ className = '' }) => {
     (stepIndex: number) => {
       setSteps(prevSteps => {
         const newSteps = [...prevSteps];
-        const wasActive = newSteps[stepIndex];
-        newSteps[stepIndex] = !newSteps[stepIndex];
+        const wasActive = newSteps[stepIndex].active;
+        newSteps[stepIndex] = {
+          ...newSteps[stepIndex],
+          active: !newSteps[stepIndex].active,
+          note: newSteps[stepIndex].active
+            ? newSteps[stepIndex].note
+            : selectedNote,
+        };
 
         // Update the ref so the playing loop uses the latest pattern
         stepsRef.current = newSteps;
 
         // If step is being activated (turned on), play the note immediately
-        if (!wasActive && newSteps[stepIndex]) {
-          playNote('c3', 200); // Play for 200ms when activating step
+        if (!wasActive && newSteps[stepIndex].active) {
+          playNote(newSteps[stepIndex].note, 200); // Play for 200ms when activating step
         }
 
         return newSteps;
       });
     },
-    [playNote]
+    [playNote, selectedNote]
   );
 
+  const updateStepNote = useCallback((stepIndex: number, newNote: string) => {
+    setSteps(prevSteps => {
+      const newSteps = [...prevSteps];
+      newSteps[stepIndex] = {
+        ...newSteps[stepIndex],
+        note: newNote,
+      };
+      stepsRef.current = newSteps;
+      return newSteps;
+    });
+  }, []);
+
   const clearAllSteps = useCallback(() => {
-    const newSteps = new Array(16).fill(false);
+    const newSteps = new Array(16)
+      .fill(null)
+      .map(() => ({ active: false, note: 'c3' }));
     setSteps(newSteps);
     stepsRef.current = newSteps;
   }, []);
@@ -181,8 +209,8 @@ const Sequencer: React.FC<SequencerProps> = ({ className = '' }) => {
       setCurrentStep(stepIndex);
 
       // Use the ref to get the current steps (real-time updates)
-      if (stepsRef.current[stepIndex]) {
-        playNote('c3', stepDuration * 0.8); // Play for 80% of step duration
+      if (stepsRef.current[stepIndex].active) {
+        playNote(stepsRef.current[stepIndex].note, stepDuration * 0.8); // Play for 80% of step duration
       }
     };
 
@@ -230,28 +258,66 @@ const Sequencer: React.FC<SequencerProps> = ({ className = '' }) => {
 
       {/* Step Grid */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">Steps (C3)</h3>
+        <h3 className="text-lg font-semibold text-gray-700 mb-3">
+          Steps (Individual Notes)
+        </h3>
         <div className="grid grid-cols-8 gap-2 mb-4">
-          {steps.map((isActive, index) => (
-            <button
-              key={index}
-              onClick={() => toggleStep(index)}
-              className={`
-                aspect-square w-12 h-12 rounded-md border-2 transition-all duration-150 font-bold text-sm
-                ${
-                  isActive
-                    ? 'bg-blue-500 border-blue-600 text-white shadow-lg'
-                    : 'bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200'
-                }
-                ${
-                  currentStep === index && isPlaying
-                    ? 'ring-4 ring-yellow-400 ring-opacity-75 scale-110'
-                    : ''
-                }
-              `}
-            >
-              {index + 1}
-            </button>
+          {steps.map((step, index) => (
+            <div key={index} className="flex flex-col items-center">
+              <button
+                onClick={() => toggleStep(index)}
+                className={`
+                  aspect-square w-12 h-12 rounded-md border-2 transition-all duration-150 font-bold text-xs flex flex-col items-center justify-center
+                  ${
+                    step.active
+                      ? 'bg-blue-500 border-blue-600 text-white shadow-lg'
+                      : 'bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200'
+                  }
+                  ${
+                    currentStep === index && isPlaying
+                      ? 'ring-4 ring-yellow-400 ring-opacity-75 scale-110'
+                      : ''
+                  }
+                `}
+              >
+                <span className="text-xs">{index + 1}</span>
+                {step.active && (
+                  <span className="text-xs font-normal">
+                    {step.note.toUpperCase()}
+                  </span>
+                )}
+              </button>
+              {step.active && (
+                <select
+                  value={step.note}
+                  onChange={e => updateStepNote(index, e.target.value)}
+                  className="mt-1 text-xs border rounded px-1 py-0.5 w-12 text-center"
+                  onClick={e => e.stopPropagation()}
+                >
+                  {[
+                    'c3',
+                    'd3',
+                    'e3',
+                    'f3',
+                    'g3',
+                    'a3',
+                    'b3',
+                    'c4',
+                    'd4',
+                    'e4',
+                    'f4',
+                    'g4',
+                    'a4',
+                    'b4',
+                    'c5',
+                  ].map(note => (
+                    <option key={note} value={note}>
+                      {note.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           ))}
         </div>
 
@@ -326,27 +392,61 @@ const Sequencer: React.FC<SequencerProps> = ({ className = '' }) => {
             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
           />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Default Note for New Steps
+          </label>
+          <select
+            value={selectedNote}
+            onChange={e => setSelectedNote(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {[
+              'c3',
+              'd3',
+              'e3',
+              'f3',
+              'g3',
+              'a3',
+              'b3',
+              'c4',
+              'd4',
+              'e4',
+              'f4',
+              'g4',
+              'a4',
+              'b4',
+              'c5',
+            ].map(note => (
+              <option key={note} value={note}>
+                {note.toUpperCase()}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Pattern Display */}
       <div className="bg-gray-50 p-4 rounded-md">
         <h4 className="text-sm font-medium text-gray-700 mb-2">Pattern</h4>
         <div className="text-sm font-mono">
-          {steps.map((isActive, index) => (
+          {steps.map((step, index) => (
             <span
               key={index}
               className={`
-                inline-block w-6 text-center
-                ${isActive ? 'text-blue-600 font-bold' : 'text-gray-400'}
+                inline-block w-8 text-center
+                ${step.active ? 'text-blue-600 font-bold' : 'text-gray-400'}
                 ${currentStep === index && isPlaying ? 'bg-yellow-200' : ''}
               `}
+              title={step.active ? step.note.toUpperCase() : 'Empty'}
             >
-              {isActive ? '●' : '○'}
+              {step.active ? step.note.charAt(0).toUpperCase() : '○'}
             </span>
           ))}
         </div>
         <p className="text-xs text-gray-500 mt-1">
-          Active steps: {steps.filter(Boolean).length}/16
+          Active steps: {steps.filter(step => step.active).length}/16
         </p>
       </div>
     </div>
