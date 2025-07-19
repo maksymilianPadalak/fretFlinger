@@ -1,1 +1,8 @@
-export { setupContext, getGuitar } from './audioProcessing';
+export {
+  setupContext,
+  startRecording,
+  stopRecording,
+  playRecording,
+  isRecording,
+  hasRecording,
+} from './audioProcessing';

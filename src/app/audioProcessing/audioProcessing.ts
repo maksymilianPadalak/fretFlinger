@@ -20,4 +20,67 @@ const setupContext = async (contextRef: React.RefObject<AudioContext>) => {
   }
 };
 
-export { setupContext };
+let mediaRecorder: MediaRecorder | null = null;
+let recordedChunks: Blob[] = [];
+let recordedAudio: HTMLAudioElement | null = null;
+
+const startRecording = async () => {
+  try {
+    const stream = await getGuitar();
+    mediaRecorder = new MediaRecorder(stream);
+    recordedChunks = [];
+
+    mediaRecorder.ondataavailable = event => {
+      if (event.data.size > 0) {
+        recordedChunks.push(event.data);
+      }
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: 'audio/wav' });
+      const audioUrl = URL.createObjectURL(blob);
+      recordedAudio = new Audio(audioUrl);
+    };
+
+    mediaRecorder.start();
+    return true;
+  } catch (error) {
+    console.error('Error starting recording:', error);
+    return false;
+  }
+};
+
+const stopRecording = () => {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    return true;
+  }
+  return false;
+};
+
+const playRecording = () => {
+  if (recordedAudio) {
+    recordedAudio.currentTime = 0;
+    recordedAudio.play();
+    return true;
+  }
+  return false;
+};
+
+const isRecording = () => {
+  return mediaRecorder?.state === 'recording';
+};
+
+const hasRecording = () => {
+  return recordedAudio !== null;
+};
+
+export {
+  setupContext,
+  startRecording,
+  stopRecording,
+  playRecording,
+  isRecording,
+  hasRecording,
+};
