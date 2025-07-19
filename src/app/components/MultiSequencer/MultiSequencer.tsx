@@ -2,31 +2,21 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import * as Tone from 'tone';
-
-interface MultiSequencerProps {
-  className?: string;
-}
-
-interface Step {
-  active: boolean;
-  note: string;
-}
-
-interface Track {
-  id: string;
-  name: string;
-  steps: Step[];
-  volume: number;
-  muted: boolean;
-  color: string;
-}
+import { MultiSequencerProps, Track, Preset } from './types';
+import { PRESETS } from './presets';
+import {
+  getNotesForTrack,
+  getTrackColorClasses,
+  getChordNotes,
+} from './audioUtils';
+import { useAudioPlayback } from './useAudioHooks';
 
 const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
   const [tracks, setTracks] = useState<Track[]>([
     {
       id: 'kick',
       name: 'Kick',
-      steps: new Array(16)
+      steps: new Array(32)
         .fill(null)
         .map(() => ({ active: false, note: 'C1' })),
       volume: 0.8,
@@ -34,9 +24,29 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
       color: 'red',
     },
     {
+      id: 'snare',
+      name: 'Snare',
+      steps: new Array(32)
+        .fill(null)
+        .map(() => ({ active: false, note: 'C2' })),
+      volume: 0.7,
+      muted: false,
+      color: 'orange',
+    },
+    {
+      id: 'hihat',
+      name: 'Hi-Hat',
+      steps: new Array(32)
+        .fill(null)
+        .map(() => ({ active: false, note: 'C3' })),
+      volume: 0.5,
+      muted: false,
+      color: 'yellow',
+    },
+    {
       id: 'bass',
       name: 'Bass',
-      steps: new Array(16)
+      steps: new Array(32)
         .fill(null)
         .map(() => ({ active: false, note: 'E2' })),
       volume: 0.6,
@@ -44,14 +54,30 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
       color: 'blue',
     },
     {
+      id: 'piano',
+      name: 'Piano',
+      steps: new Array(32).fill(null).map(() => ({ active: false, note: 'C' })),
+      volume: 0.5,
+      muted: false,
+      color: 'purple',
+    },
+    {
       id: 'pad',
       name: 'Pad',
-      steps: new Array(16)
+      steps: new Array(32).fill(null).map(() => ({ active: false, note: 'C' })),
+      volume: 0.4,
+      muted: false,
+      color: 'green',
+    },
+    {
+      id: 'lead',
+      name: 'Lead',
+      steps: new Array(32)
         .fill(null)
         .map(() => ({ active: false, note: 'C4' })),
       volume: 0.4,
       muted: false,
-      color: 'green',
+      color: 'pink',
     },
   ]);
 
@@ -59,18 +85,42 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
   const [currentStep, setCurrentStep] = useState<number>(-1);
   const [bpm, setBpm] = useState<number>(120);
   const [masterVolume, setMasterVolume] = useState<number>(0.7);
+  const [selectedPreset, setSelectedPreset] = useState<string>('');
 
   const sequenceRef = useRef<Tone.Sequence | null>(null);
   const kickSynthRef = useRef<Tone.MembraneSynth | null>(null);
+  const snareSynthRef = useRef<Tone.NoiseSynth | null>(null);
+  const hihatSynthRef = useRef<Tone.MetalSynth | null>(null);
   const bassSynthRef = useRef<Tone.MonoSynth | null>(null);
+  const pianoSynthRef = useRef<Tone.PolySynth | null>(null);
   const padSynthRef = useRef<Tone.PolySynth | null>(null);
+  const leadSynthRef = useRef<Tone.MonoSynth | null>(null);
   const masterVolumeRef = useRef<Tone.Volume | null>(null);
+  const reverbRef = useRef<Tone.Reverb | null>(null);
   const tracksRef = useRef<Track[]>(tracks);
+
+  // Use the audio playback hook
+  const { playTrackSound } = useAudioPlayback({
+    kickSynthRef,
+    snareSynthRef,
+    hihatSynthRef,
+    bassSynthRef,
+    pianoSynthRef,
+    padSynthRef,
+    leadSynthRef,
+  });
 
   // Initialize Tone.js instruments
   useEffect(() => {
     const initTone = async () => {
       try {
+        // Create reverb effect for pads and piano
+        reverbRef.current = new Tone.Reverb({
+          decay: 3,
+          preDelay: 0.1,
+          wet: 0.3,
+        }).toDestination();
+
         // Create master volume control
         masterVolumeRef.current = new Tone.Volume(
           Tone.gainToDb(masterVolume)
@@ -80,9 +130,43 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
         kickSynthRef.current = new Tone.MembraneSynth({
           pitchDecay: 0.05,
           octaves: 10,
-          oscillator: { type: 'sine' },
-          envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4 },
+          oscillator: {
+            type: 'sine',
+          },
+          envelope: {
+            attack: 0.001,
+            decay: 0.3,
+            sustain: 0.01,
+            release: 1.2,
+          },
         }).connect(masterVolumeRef.current);
+        kickSynthRef.current.volume.value = 3;
+
+        // Create snare drum synth
+        snareSynthRef.current = new Tone.NoiseSynth({
+          noise: { type: 'white' },
+          envelope: {
+            attack: 0.005,
+            decay: 0.1,
+            sustain: 0.0,
+            release: 0.1,
+          },
+        }).connect(masterVolumeRef.current);
+        snareSynthRef.current.volume.value = 0;
+
+        // Create hi-hat synth
+        hihatSynthRef.current = new Tone.MetalSynth({
+          envelope: {
+            attack: 0.001,
+            decay: 0.1,
+            release: 0.01,
+          },
+          harmonicity: 5.1,
+          modulationIndex: 32,
+          resonance: 4000,
+          octaves: 1.5,
+        }).connect(masterVolumeRef.current);
+        hihatSynthRef.current.volume.value = -10;
 
         // Create bass synth
         bassSynthRef.current = new Tone.MonoSynth({
@@ -96,10 +180,28 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
           },
         }).connect(masterVolumeRef.current);
 
-        // Create pad synth (polyphonic for chords)
+        // Create piano synth with reverb
+        pianoSynthRef.current = new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: 'triangle' },
+          envelope: { attack: 0.02, decay: 0.3, sustain: 0.4, release: 0.8 },
+        }).connect(reverbRef.current);
+
+        // Create pad synth with reverb
         padSynthRef.current = new Tone.PolySynth(Tone.Synth, {
           oscillator: { type: 'sine' },
           envelope: { attack: 0.1, decay: 0.3, sustain: 0.7, release: 0.8 },
+        }).connect(reverbRef.current);
+
+        // Create lead synth
+        leadSynthRef.current = new Tone.MonoSynth({
+          oscillator: { type: 'sawtooth' },
+          envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.5 },
+          filterEnvelope: {
+            attack: 0.01,
+            decay: 0.1,
+            sustain: 0.8,
+            release: 0.5,
+          },
         }).connect(masterVolumeRef.current);
       } catch (error) {
         console.error('Failed to initialize Tone.js:', error);
@@ -112,8 +214,13 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
       // Cleanup Tone.js resources
       stopSequencer();
       kickSynthRef.current?.dispose();
+      snareSynthRef.current?.dispose();
+      hihatSynthRef.current?.dispose();
       bassSynthRef.current?.dispose();
+      pianoSynthRef.current?.dispose();
       padSynthRef.current?.dispose();
+      leadSynthRef.current?.dispose();
+      reverbRef.current?.dispose();
       masterVolumeRef.current?.dispose();
     };
   }, []);
@@ -134,7 +241,19 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
       switch (track.id) {
         case 'kick':
           if (kickSynthRef.current) {
-            kickSynthRef.current.volume.value = Tone.gainToDb(track.volume);
+            kickSynthRef.current.volume.value =
+              6 + Tone.gainToDb(track.volume * 2);
+          }
+          break;
+        case 'snare':
+          if (snareSynthRef.current) {
+            snareSynthRef.current.volume.value = Tone.gainToDb(track.volume);
+          }
+          break;
+        case 'hihat':
+          if (hihatSynthRef.current) {
+            hihatSynthRef.current.volume.value =
+              -10 + Tone.gainToDb(track.volume);
           }
           break;
         case 'bass':
@@ -142,9 +261,19 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
             bassSynthRef.current.volume.value = Tone.gainToDb(track.volume);
           }
           break;
+        case 'piano':
+          if (pianoSynthRef.current) {
+            pianoSynthRef.current.volume.value = Tone.gainToDb(track.volume);
+          }
+          break;
         case 'pad':
           if (padSynthRef.current) {
             padSynthRef.current.volume.value = Tone.gainToDb(track.volume);
+          }
+          break;
+        case 'lead':
+          if (leadSynthRef.current) {
+            leadSynthRef.current.volume.value = Tone.gainToDb(track.volume);
           }
           break;
       }
@@ -157,69 +286,6 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
       Tone.Transport.bpm.value = bpm;
     }
   }, [bpm, isPlaying]);
-
-  // Play sounds using Tone.js with proper timing
-  const playKick = useCallback((noteString: string, time?: number) => {
-    if (kickSynthRef.current) {
-      try {
-        if (time !== undefined) {
-          kickSynthRef.current.triggerAttackRelease(noteString, '8n', time);
-        } else {
-          kickSynthRef.current.triggerAttackRelease(noteString, '8n');
-        }
-      } catch (error) {
-        console.warn('Kick synth timing error:', error);
-      }
-    }
-  }, []);
-
-  const playBass = useCallback((noteString: string, time?: number) => {
-    if (bassSynthRef.current) {
-      try {
-        if (time !== undefined) {
-          bassSynthRef.current.triggerAttackRelease(noteString, '4n', time);
-        } else {
-          bassSynthRef.current.triggerAttackRelease(noteString, '4n');
-        }
-      } catch (error) {
-        console.warn('Bass synth timing error:', error);
-      }
-    }
-  }, []);
-
-  const playPad = useCallback((noteString: string, time?: number) => {
-    if (padSynthRef.current) {
-      try {
-        if (time !== undefined) {
-          padSynthRef.current.triggerAttackRelease(noteString, '2n', time);
-        } else {
-          padSynthRef.current.triggerAttackRelease(noteString, '2n');
-        }
-      } catch (error) {
-        console.warn('Pad synth timing error:', error);
-      }
-    }
-  }, []);
-
-  const playTrackSound = useCallback(
-    (trackId: string, note: string) => {
-      const track = tracksRef.current.find(t => t.id === trackId);
-      if (!track || track.muted) return;
-
-      switch (trackId) {
-        case 'kick':
-          playKick(note);
-          break;
-        case 'bass':
-          playBass(note);
-          break;
-        case 'pad':
-          playPad(note);
-          break;
-      }
-    },
-    [playKick, playBass, playPad]
-  );
 
   const toggleStep = useCallback(
     (trackId: string, stepIndex: number) => {
@@ -235,7 +301,7 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
 
             // Play sound when activating step
             if (!wasActive && newSteps[stepIndex].active) {
-              playTrackSound(trackId, newSteps[stepIndex].note);
+              playTrackSound(trackId, newSteps[stepIndex].note, tracksRef);
             }
 
             return { ...track, steps: newSteps };
@@ -275,7 +341,17 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
     switch (trackId) {
       case 'kick':
         if (kickSynthRef.current) {
-          kickSynthRef.current.volume.value = Tone.gainToDb(volume);
+          kickSynthRef.current.volume.value = 6 + Tone.gainToDb(volume * 2);
+        }
+        break;
+      case 'snare':
+        if (snareSynthRef.current) {
+          snareSynthRef.current.volume.value = Tone.gainToDb(volume);
+        }
+        break;
+      case 'hihat':
+        if (hihatSynthRef.current) {
+          hihatSynthRef.current.volume.value = -10 + Tone.gainToDb(volume);
         }
         break;
       case 'bass':
@@ -283,9 +359,19 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
           bassSynthRef.current.volume.value = Tone.gainToDb(volume);
         }
         break;
+      case 'piano':
+        if (pianoSynthRef.current) {
+          pianoSynthRef.current.volume.value = Tone.gainToDb(volume);
+        }
+        break;
       case 'pad':
         if (padSynthRef.current) {
           padSynthRef.current.volume.value = Tone.gainToDb(volume);
+        }
+        break;
+      case 'lead':
+        if (leadSynthRef.current) {
+          leadSynthRef.current.volume.value = Tone.gainToDb(volume);
         }
         break;
     }
@@ -343,28 +429,70 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
           if (!track.muted && track.steps[step].active) {
             const note = track.steps[step].note;
 
-            // Schedule sounds at the precise time
-            switch (track.id) {
-              case 'kick':
-                if (kickSynthRef.current) {
-                  kickSynthRef.current.triggerAttackRelease(note, '8n', time);
-                }
-                break;
-              case 'bass':
-                if (bassSynthRef.current) {
-                  bassSynthRef.current.triggerAttackRelease(note, '4n', time);
-                }
-                break;
-              case 'pad':
-                if (padSynthRef.current) {
-                  padSynthRef.current.triggerAttackRelease(note, '2n', time);
-                }
-                break;
+            try {
+              // Schedule sounds at the precise time
+              switch (track.id) {
+                case 'kick':
+                  if (kickSynthRef.current) {
+                    kickSynthRef.current.triggerAttackRelease(note, '8n', time);
+                  }
+                  break;
+                case 'snare':
+                  if (snareSynthRef.current) {
+                    snareSynthRef.current.triggerAttackRelease('8n', time);
+                  }
+                  break;
+                case 'hihat':
+                  if (hihatSynthRef.current) {
+                    hihatSynthRef.current.triggerAttackRelease(
+                      'C4',
+                      '16n',
+                      time
+                    );
+                  }
+                  break;
+                case 'bass':
+                  if (bassSynthRef.current) {
+                    bassSynthRef.current.triggerAttackRelease(note, '4n', time);
+                  }
+                  break;
+                case 'piano':
+                  if (pianoSynthRef.current) {
+                    const chord = getChordNotes(note);
+                    if (chord) {
+                      pianoSynthRef.current.triggerAttackRelease(
+                        chord,
+                        '8n',
+                        time
+                      );
+                    }
+                  }
+                  break;
+                case 'pad':
+                  if (padSynthRef.current) {
+                    const chord = getChordNotes(note);
+                    if (chord) {
+                      padSynthRef.current.triggerAttackRelease(
+                        chord,
+                        '8n',
+                        time
+                      );
+                    }
+                  }
+                  break;
+                case 'lead':
+                  if (leadSynthRef.current) {
+                    leadSynthRef.current.triggerAttackRelease(note, '8n', time);
+                  }
+                  break;
+              }
+            } catch (error) {
+              console.warn(`Timing error for ${track.id}:`, error);
             }
           }
         });
       },
-      Array.from({ length: 16 }, (_, i) => i),
+      Array.from({ length: 32 }, (_, i) => i),
       '16n'
     );
 
@@ -390,99 +518,86 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
     }
   };
 
-  const getNotesForTrack = (trackId: string): string[] => {
-    switch (trackId) {
-      case 'kick':
-        // Kick drums - low frequencies
-        return [
-          'C1',
-          'D1',
-          'E1',
-          'F1',
-          'G1',
-          'A1',
-          'B1',
-          'C2',
-          'D2',
-          'E2',
-          'F2',
-          'G2',
-        ];
-      case 'bass':
-        // Bass - low to mid-low frequencies
-        return [
-          'C1',
-          'D1',
-          'E1',
-          'F1',
-          'G1',
-          'A1',
-          'B1',
-          'C2',
-          'D2',
-          'E2',
-          'F2',
-          'G2',
-          'A2',
-          'B2',
-          'C3',
-        ];
-      case 'pad':
-        // Pad - wide range for chords and melodies
-        return [
-          'C3',
-          'D3',
-          'E3',
-          'F3',
-          'G3',
-          'A3',
-          'B3',
-          'C4',
-          'D4',
-          'E4',
-          'F4',
-          'G4',
-          'A4',
-          'B4',
-          'C5',
-          'D5',
-          'E5',
-        ];
-      default:
-        return ['C3', 'D3', 'E3', 'F3', 'G3', 'A3', 'B3', 'C4'];
-    }
-  };
+  const loadPreset = useCallback(
+    (presetName: string) => {
+      const preset = PRESETS.find(p => p.name === presetName);
+      if (!preset) return;
 
-  const getTrackColorClasses = (
-    color: string,
-    active: boolean,
-    muted: boolean
-  ) => {
-    if (muted) return 'bg-gray-300 border-gray-400 text-gray-500';
+      // Stop sequencer if playing
+      if (isPlaying) {
+        stopSequencer();
+      }
 
-    const colorMap = {
-      red: active
-        ? 'bg-red-500 border-red-600 text-white'
-        : 'bg-red-100 border-red-300 text-red-700',
-      blue: active
-        ? 'bg-blue-500 border-blue-600 text-white'
-        : 'bg-blue-100 border-blue-300 text-blue-700',
-      green: active
-        ? 'bg-green-500 border-green-600 text-white'
-        : 'bg-green-100 border-green-300 text-green-700',
-    };
+      // Update BPM
+      setBpm(preset.bpm);
 
-    return (
-      colorMap[color as keyof typeof colorMap] ||
-      'bg-gray-100 border-gray-300 text-gray-600'
-    );
-  };
+      // Update tracks
+      setTracks(prevTracks => {
+        const newTracks = prevTracks.map(track => {
+          const presetTrack = preset.tracks[track.id];
+          if (presetTrack) {
+            return {
+              ...track,
+              steps: presetTrack.steps,
+              volume: presetTrack.volume,
+              muted: presetTrack.muted,
+            };
+          }
+          return track;
+        });
+        tracksRef.current = newTracks;
+        return newTracks;
+      });
+
+      setSelectedPreset(presetName);
+    },
+    [isPlaying, stopSequencer]
+  );
 
   return (
     <div className={`p-6 bg-white rounded-lg shadow-lg ${className}`}>
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
-        Multi-Track Sequencer (Tone.js)
+        Guitar Backing Track Machine
       </h2>
+
+      {/* Preset Selection */}
+      <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <h3 className="text-lg font-semibold text-blue-800 mb-3">
+          Backing Track Presets
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Preset
+            </label>
+            <select
+              value={selectedPreset}
+              onChange={e => loadPreset(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Custom / No Preset</option>
+              {PRESETS.map(preset => (
+                <option key={preset.name} value={preset.name}>
+                  {preset.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {selectedPreset && (
+            <div className="bg-white p-3 rounded border">
+              <h4 className="font-medium text-gray-800">
+                {PRESETS.find(p => p.name === selectedPreset)?.name}
+              </h4>
+              <p className="text-sm text-gray-600 mt-1">
+                {PRESETS.find(p => p.name === selectedPreset)?.description}
+              </p>
+              <p className="text-sm text-blue-600 mt-2">
+                BPM: {PRESETS.find(p => p.name === selectedPreset)?.bpm}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Master Controls */}
       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -534,7 +649,7 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
 
       {/* Step position indicator */}
       <div className="flex gap-1 mb-6">
-        {Array.from({ length: 16 }, (_, index) => (
+        {Array.from({ length: 32 }, (_, index) => (
           <div
             key={index}
             className={`flex-1 h-2 rounded-full transition-all duration-150 ${
@@ -555,13 +670,9 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
             <h3 className="text-lg font-semibold text-gray-700">
               {track.name}
               <span className="text-sm font-normal text-gray-500 ml-2">
-                ({getNotesForTrack(track.id)[0]}-
-                {
-                  getNotesForTrack(track.id)[
-                    getNotesForTrack(track.id).length - 1
-                  ]
-                }
-                )
+                {track.id === 'pad' || track.id === 'piano'
+                  ? '(C Major Chords)'
+                  : `(${getNotesForTrack(track.id)[0]}-${getNotesForTrack(track.id)[getNotesForTrack(track.id).length - 1]})`}
               </span>
             </h3>
             <div className="flex items-center gap-2">
