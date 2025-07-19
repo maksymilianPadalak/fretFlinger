@@ -66,7 +66,7 @@ export default function Home() {
         <div className="flex gap-4">
           <button
             onClick={handleRecordClick}
-            className={`flex-1 py-3 px-4 rounded font-medium transition-colors ${
+            className={`flex-1 py-3 px-4 rounded font-medium transition-colors cursor-pointer ${
               recording
                 ? 'bg-red-500 text-white hover:bg-red-600'
                 : 'bg-gray-900 text-white hover:bg-gray-800'
@@ -80,9 +80,10 @@ export default function Home() {
             disabled={!hasRecordedAudio}
             className={`flex-1 py-3 px-4 rounded font-medium transition-colors ${
               hasRecordedAudio
-                ? 'bg-gray-900 text-white hover:bg-gray-800'
+                ? 'bg-gray-900 text-white hover:bg-gray-800 cursor-pointer'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            }`}
+            }
+            `}
           >
             Play
           </button>
