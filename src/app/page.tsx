@@ -8,6 +8,8 @@ import {
   playRecording,
   isRecording,
   hasRecording,
+  getAudioContext,
+  getSourceNode,
 } from './audioProcessing';
 import AudioVisualizer from './components/AudioVisualizer';
 
@@ -58,7 +60,12 @@ export default function Home() {
           Guitar Audio Processor
         </h1>
 
-        <AudioVisualizer ref={visualizerRef} />
+        <AudioVisualizer
+          ref={visualizerRef}
+          audioContext={getAudioContext()}
+          sourceNode={getSourceNode()}
+          isRecording={recording}
+        />
 
         <div className="flex gap-4">
           <button

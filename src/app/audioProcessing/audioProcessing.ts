@@ -8,6 +8,9 @@ const getGuitar = () => {
   });
 };
 
+let audioContext: AudioContext | null = null;
+let sourceNode: MediaStreamAudioSourceNode | null = null;
+
 const setupContext = async (contextRef: React.RefObject<AudioContext>) => {
   try {
     const guitar = await getGuitar();
@@ -15,10 +18,15 @@ const setupContext = async (contextRef: React.RefObject<AudioContext>) => {
     const source = context.createMediaStreamSource(guitar);
     source.connect(context.destination);
     contextRef.current = context;
+    audioContext = context;
+    sourceNode = source;
   } catch (error) {
     console.error('Error setting up audio context:', error);
   }
 };
+
+const getAudioContext = () => audioContext;
+const getSourceNode = () => sourceNode;
 
 let mediaRecorder: MediaRecorder | null = null;
 let recordedChunks: Blob[] = [];
@@ -83,4 +91,6 @@ export {
   playRecording,
   isRecording,
   hasRecording,
+  getAudioContext,
+  getSourceNode,
 };
