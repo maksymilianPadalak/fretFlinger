@@ -13,3 +13,11 @@ export {
   formatSize,
   waitForRecordingProcessing,
 } from './audioProcessing';
+
+// Export note frequency functions
+export {
+  noteToHz,
+  getAvailableNotes,
+  isValidNote,
+  hzToNote,
+} from './noteFrequencies';
