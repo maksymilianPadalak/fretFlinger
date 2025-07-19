@@ -9,6 +9,7 @@ import {
   isRecording,
   hasRecording,
 } from './audioProcessing';
+import AudioVisualizer from './components/AudioVisualizer';
 
 export default function Home() {
   const visualizerRef = useRef<HTMLDivElement>(null);
@@ -57,11 +58,7 @@ export default function Home() {
           Guitar Audio Processor
         </h1>
 
-        <div
-          ref={visualizerRef}
-          id="visualizer"
-          className="w-full h-24 my-4 bg-gray-100 rounded border"
-        />
+        <AudioVisualizer ref={visualizerRef} />
 
         <div className="flex gap-4">
           <button
