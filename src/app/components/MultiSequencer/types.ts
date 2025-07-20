@@ -1,5 +1,7 @@
 export interface MultiSequencerProps {
   className?: string;
+  externalPreset?: Preset | null;
+  onPresetLoaded?: (presetName: string) => void;
 }
 
 export interface Step {

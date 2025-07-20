@@ -11,7 +11,11 @@ import {
 } from './audioUtils';
 import { useAudioPlayback } from './useAudioHooks';
 
-const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
+const MultiSequencer: React.FC<MultiSequencerProps> = ({
+  className = '',
+  externalPreset = null,
+  onPresetLoaded,
+}) => {
   const [tracks, setTracks] = useState<Track[]>([
     {
       id: 'kick',
@@ -387,6 +391,12 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
     }
   }, [bpm, isPlaying]);
 
+  useEffect(() => {
+    if (externalPreset) {
+      loadExternalPreset(externalPreset);
+    }
+  }, [externalPreset]);
+
   const toggleStep = useCallback(
     (trackId: string, stepIndex: number) => {
       setTracks(prevTracks => {
@@ -652,6 +662,44 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({ className = '' }) => {
       setSelectedPreset(presetName);
     },
     [isPlaying]
+  );
+
+  const loadExternalPreset = useCallback(
+    (preset: Preset) => {
+      // Stop sequencer if playing
+      if (isPlaying) {
+        stopSequencer();
+      }
+
+      // Update BPM
+      setBpm(preset.bpm);
+
+      // Update tracks
+      setTracks(prevTracks => {
+        const newTracks = prevTracks.map(track => {
+          const presetTrack = preset.tracks[track.id];
+          if (presetTrack) {
+            return {
+              ...track,
+              steps: presetTrack.steps,
+              volume: presetTrack.volume,
+              muted: presetTrack.muted,
+            };
+          }
+          return track;
+        });
+        tracksRef.current = newTracks;
+        return newTracks;
+      });
+
+      setSelectedPreset(preset.name);
+
+      // Notify parent component
+      if (onPresetLoaded) {
+        onPresetLoaded(preset.name);
+      }
+    },
+    [isPlaying, onPresetLoaded, stopSequencer]
   );
 
   return (
