@@ -27,27 +27,29 @@ export default function VoiceConversation({
 }: VoiceConversationProps) {
   const [lastMessage, setLastMessage] = useState<string>('');
   const [isProcessingPreset, setIsProcessingPreset] = useState(false);
+  const [isConnected, setIsConnected] = useState(false); // Track connection state
 
   const conversation = useConversation({
     onConnect: () => {
       console.log('🎤 Voice conversation connected');
+      setIsConnected(true);
       setLastMessage(
         'Connected! You can now speak your backing track requests.'
       );
     },
     onDisconnect: () => {
       console.log('🎤 Voice conversation disconnected');
+      setIsConnected(false);
       setLastMessage('Disconnected from voice agent.');
     },
-    onMessage: async message => {
+    onMessage: async (message: any) => {
+      // Using 'any' temporarily due to potential type mismatch
       console.log('🎤 Voice message received:', message);
 
       // Check if this is a user transcript (what the user said)
       if (message.type === 'user_transcript' && message.user_transcript?.text) {
         const userRequest = message.user_transcript.text;
         setLastMessage(`You said: "${userRequest}"`);
-
-        // Generate preset based on what the user said
         await handleVoiceRequest(userRequest);
       }
 
@@ -58,10 +60,30 @@ export default function VoiceConversation({
       ) {
         setLastMessage(`Agent: ${message.agent_response.agent_response_text}`);
       }
+
+      // Handle unexpected audio messages
+      if (message.type === 'audio' && message.audio?.data) {
+        console.log(
+          '🎵 Received audio data, size:',
+          message.audio.data.byteLength
+        );
+        try {
+          // Attempt to log audio data (decoding commented out unless needed)
+          // const audioContext = new AudioContext();
+          // const audioBuffer = await audioContext.decodeAudioData(message.audio.data);
+          // console.log('Audio decoded successfully:', audioBuffer);
+        } catch (error) {
+          console.error('🎵 Error decoding audio data:', error);
+          setLastMessage(
+            `Error: Unable to decode audio data. ${error instanceof Error ? error.message : ''}`
+          );
+        }
+      }
     },
     onError: error => {
       console.error('🎤 Voice conversation error:', error);
-      setLastMessage(`Error: ${error.message || 'Voice connection failed'}`);
+      setLastMessage(`Error: ${error?.message || 'Voice connection failed'}`);
+      setIsConnected(false); // Ensure connection state reflects error
     },
   });
 
@@ -85,14 +107,14 @@ export default function VoiceConversation({
       }
 
       const { preset } = await response.json();
+      console.log('Preset received from API:', preset); // Debug log
 
       if (preset) {
         // Load the preset into the sequencer
         onPresetGenerated(preset);
 
-        // Send confirmation back to the agent
+        // Send confirmation back to the agent (if supported)
         const confirmationMessage = `Perfect! I've created "${preset.name}" at ${preset.bpm} BPM. The backing track is loaded and ready to play. You can now jam along with your guitar!`;
-
         setLastMessage(`✅ Generated: ${preset.name}`);
         console.log('🎵 Preset generated successfully:', preset.name);
       }
@@ -109,13 +131,8 @@ export default function VoiceConversation({
   const startConversation = useCallback(async () => {
     try {
       setLastMessage('Requesting microphone access...');
-
-      // Request microphone permission
       await navigator.mediaDevices.getUserMedia({ audio: true });
-
       setLastMessage('Starting voice conversation...');
-
-      // Start the conversation with your agent
       await conversation.startSession({
         agentId: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID!, // Your agent ID from env
       });
@@ -124,16 +141,15 @@ export default function VoiceConversation({
       setLastMessage(
         `Failed to start: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
+      setIsConnected(false);
     }
   }, [conversation]);
 
   const stopConversation = useCallback(async () => {
     setLastMessage('Stopping conversation...');
     await conversation.endSession();
+    setIsConnected(false);
   }, [conversation]);
-
-  const isConnected = conversation.status === 'connected';
-  const isConnecting = conversation.status === 'connecting';
 
   return (
     <div
@@ -148,13 +164,13 @@ export default function VoiceConversation({
       <div className="flex gap-3 mb-4">
         <button
           onClick={startConversation}
-          disabled={isConnected || isConnecting}
+          disabled={isConnected}
           className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center"
         >
-          {isConnecting ? (
+          {isConnected ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Connecting...
+              <span className="mr-2">🎤</span>
+              Connected
             </>
           ) : (
             <>
@@ -180,30 +196,13 @@ export default function VoiceConversation({
           <div className="flex items-center">
             <div
               className={`w-3 h-3 rounded-full mr-2 ${
-                isConnected
-                  ? 'bg-green-500 animate-pulse'
-                  : isConnecting
-                    ? 'bg-yellow-500 animate-pulse'
-                    : 'bg-gray-300'
+                isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-300'
               }`}
             ></div>
             <span className="text-sm font-medium">
-              Status: {conversation.status}
+              Status: {isConnected ? 'Connected' : 'Not Connected'}
             </span>
           </div>
-
-          {isConnected && (
-            <div className="flex items-center text-sm">
-              <span
-                className={`inline-block w-2 h-2 rounded-full mr-2 ${
-                  conversation.isSpeaking
-                    ? 'bg-blue-500 animate-pulse'
-                    : 'bg-green-500'
-                }`}
-              ></span>
-              {conversation.isSpeaking ? 'Agent speaking' : 'Listening...'}
-            </div>
-          )}
         </div>
 
         {isProcessingPreset && (
