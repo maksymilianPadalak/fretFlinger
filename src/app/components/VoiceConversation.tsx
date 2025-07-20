@@ -464,12 +464,6 @@ export default function VoiceConversation({
                 • Agent ID needs to be configured properly in ElevenLabs
               </div>
               <div>• Check your ElevenLabs account is active</div>
-              <div className="mt-2">
-                Current Agent ID:{' '}
-                <span className="font-mono">
-                  {process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID}
-                </span>
-              </div>
             </div>
           </div>
         )}
