@@ -452,28 +452,6 @@ export default function VoiceConversation({
           </div>
         )}
 
-        {process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID && (
-          <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
-            <div className="text-orange-800 text-sm font-medium">
-              ⚠️ WebSocket Disconnecting Immediately
-            </div>
-            <div className="text-orange-700 text-xs mt-1 space-y-1">
-              <div>This usually means:</div>
-              <div>• Invalid Agent ID or API Key</div>
-              <div>
-                • Agent ID needs to be configured properly in ElevenLabs
-              </div>
-              <div>• Check your ElevenLabs account is active</div>
-              <div className="mt-2">
-                Current Agent ID:{' '}
-                <span className="font-mono">
-                  {process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Debug Information */}
         <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
           <h4 className="text-sm font-medium text-gray-800 mb-1">
