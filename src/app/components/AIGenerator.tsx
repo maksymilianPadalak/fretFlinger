@@ -129,6 +129,9 @@ export default function AIGenerator({
       )}
 
       <div className="space-y-3">
+        <div className="text-xs text-gray-500 mb-2">
+          🧠 Powered by OpenAI GPT-4 for professional backing tracks
+        </div>
         <h4 className="text-sm font-medium text-gray-700">Quick Examples:</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {quickPresets.map((preset, index) => (

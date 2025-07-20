@@ -5,6 +5,7 @@ import GuitarProcessor from './components/GuitarProcessor';
 import MultiSequencer from './components/MultiSequencer';
 import AIGenerator from './components/AIGenerator';
 import VoiceConversation from './components/VoiceConversation';
+import TestGenerator from './components/TestGenerator';
 
 interface Preset {
   name: string;
@@ -96,6 +97,9 @@ export default function Home() {
             <VoiceConversation onPresetGenerated={handlePresetGenerated} />
           )}
         </div>
+
+        {/* API Test Component (development only) */}
+        {process.env.NODE_ENV === 'development' && <TestGenerator />}
 
         {/* Guitar Audio Processor */}
         <GuitarProcessor />

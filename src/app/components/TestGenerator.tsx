@@ -26,12 +26,14 @@ export default function TestGenerator() {
       console.log('Response status:', response.status);
       console.log('Response ok:', response.ok);
 
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
+
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        throw new Error(`HTTP ${response.status}: ${responseText}`);
       }
 
-      const data = await response.json();
+      const data = JSON.parse(responseText);
       console.log('API Response:', data);
 
       if (data.preset) {
@@ -63,7 +65,7 @@ export default function TestGenerator() {
 
       {result && (
         <div className="mt-4 p-3 bg-white border rounded">
-          <pre className="text-sm">{result}</pre>
+          <pre className="text-sm whitespace-pre-wrap">{result}</pre>
         </div>
       )}
 
