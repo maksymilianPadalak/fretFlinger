@@ -42,9 +42,9 @@ export default function VoiceConversation({
     onMessage: async message => {
       console.log('🎤 Voice message received:', message);
 
-      // Check if this is a user transcript (what the user said)
-      if (message.type === 'user_transcript' && message.user_transcript?.text) {
-        const userRequest = message.user_transcript.text;
+      // Handle the message based on its source and content
+      if (message.source === 'user') {
+        const userRequest = message.message;
         setLastMessage(`You said: "${userRequest}"`);
 
         // Generate preset based on what the user said
@@ -52,16 +52,13 @@ export default function VoiceConversation({
       }
 
       // Check if this is an agent response
-      if (
-        message.type === 'agent_response' &&
-        message.agent_response?.agent_response_text
-      ) {
-        setLastMessage(`Agent: ${message.agent_response.agent_response_text}`);
+      if (message.source === 'ai') {
+        setLastMessage(`Agent: ${message.message}`);
       }
     },
     onError: error => {
       console.error('🎤 Voice conversation error:', error);
-      setLastMessage(`Error: ${error.message || 'Voice connection failed'}`);
+      setLastMessage(`Error: ${error || 'Voice connection failed'}`);
     },
   });
 
@@ -227,9 +224,14 @@ export default function VoiceConversation({
             🗣️ How to Use:
           </h4>
           <ul className="text-xs text-blue-700 space-y-1">
-            <li>1. Click "Start Voice Chat" and allow microphone access</li>
+            <li>
+              1. Click &quot;Start Voice Chat&quot; and allow microphone access
+            </li>
             <li>2. Speak your backing track request naturally</li>
-            <li>3. Example: "Create a slow blues backing track in E minor"</li>
+            <li>
+              3. Example: &quot;Create a slow blues backing track in E
+              minor&quot;
+            </li>
             <li>4. The AI will generate and load your track automatically!</li>
           </ul>
         </div>
@@ -239,10 +241,12 @@ export default function VoiceConversation({
             💡 Voice Examples:
           </h4>
           <div className="text-xs text-green-700 space-y-1">
-            <div>"I need a fast rock rhythm for guitar practice"</div>
-            <div>"Create something jazzy and mellow at 90 BPM"</div>
-            <div>"Make a blues shuffle in A that I can solo over"</div>
-            <div>"Generate an energetic metal backing track"</div>
+            <div>&quot;I need a fast rock rhythm for guitar practice&quot;</div>
+            <div>&quot;Create something jazzy and mellow at 90 BPM&quot;</div>
+            <div>
+              &quot;Make a blues shuffle in A that I can solo over&quot;
+            </div>
+            <div>&quot;Generate an energetic metal backing track&quot;</div>
           </div>
         </div>
 

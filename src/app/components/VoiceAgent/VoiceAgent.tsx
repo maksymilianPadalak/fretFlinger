@@ -62,14 +62,9 @@ const VoiceAgent: React.FC<VoiceAgentProps> = ({
         throw new Error('ElevenLabs Agent ID not configured');
       }
 
-      const wsUrl = `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${agentId}`;
+      const wsUrl = `wss://api.elevenlabs.io/v1/convai/conversation?agent_id=${agentId}&xi-api-key=${apiKey || ''}`;
 
-      websocketRef.current = new WebSocket(wsUrl, [], {
-        headers: {
-          'xi-api-key': apiKey || '',
-        },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any);
+      websocketRef.current = new WebSocket(wsUrl);
 
       websocketRef.current.onopen = () => {
         console.log('Connected to ElevenLabs Voice Agent');

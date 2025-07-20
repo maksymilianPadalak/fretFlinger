@@ -138,7 +138,9 @@ export default function AIGenerator({
               disabled={isLoading}
               className="text-left p-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-sm"
             >
-              <div className="font-medium text-purple-600">"{preset}"</div>
+              <div className="font-medium text-purple-600">
+                &quot;{preset}&quot;
+              </div>
             </button>
           ))}
         </div>
