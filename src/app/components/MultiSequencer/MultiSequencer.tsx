@@ -91,13 +91,14 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({
   const [masterVolume, setMasterVolume] = useState<number>(0.5); // Lower default volume for mellow sound
 
   const [selectedPreset, setSelectedPreset] = useState<string>('');
+  const [pianoLoading, setPianoLoading] = useState<boolean>(true);
 
   const sequenceRef = useRef<Tone.Sequence | null>(null);
   const kickSynthRef = useRef<Tone.MembraneSynth | null>(null);
   const snareSynthRef = useRef<Tone.NoiseSynth | null>(null);
   const hihatSynthRef = useRef<Tone.MetalSynth | null>(null);
   const bassSynthRef = useRef<Tone.MonoSynth | null>(null);
-  const pianoSynthRef = useRef<Tone.PolySynth | null>(null);
+  const pianoSynthRef = useRef<Tone.PolySynth | Tone.Sampler | null>(null);
   const padSynthRef = useRef<Tone.PolySynth | null>(null);
   const leadSynthRef = useRef<Tone.MonoSynth | null>(null);
   const masterVolumeRef = useRef<Tone.Volume | null>(null);
@@ -236,31 +237,56 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({
         bassSynthRef.current.connect(bassFilter);
         bassSynthRef.current.volume.value = 1;
 
-        // Create dreamy Bon Iver piano with heavy filtering and delay
-        pianoSynthRef.current = new Tone.PolySynth(Tone.Synth, {
-          oscillator: {
-            type: 'sine',
+        // Create real piano sampler with authentic samples
+        pianoSynthRef.current = new Tone.Sampler({
+          urls: {
+            C1: 'https://tonejs.github.io/audio/salamander/C1.mp3',
+            C2: 'https://tonejs.github.io/audio/salamander/C2.mp3',
+            C3: 'https://tonejs.github.io/audio/salamander/C3.mp3',
+            C4: 'https://tonejs.github.io/audio/salamander/C4.mp3',
+            C5: 'https://tonejs.github.io/audio/salamander/C5.mp3',
+            C6: 'https://tonejs.github.io/audio/salamander/C6.mp3',
+            'D#1': 'https://tonejs.github.io/audio/salamander/Ds1.mp3',
+            'D#2': 'https://tonejs.github.io/audio/salamander/Ds2.mp3',
+            'D#3': 'https://tonejs.github.io/audio/salamander/Ds3.mp3',
+            'D#4': 'https://tonejs.github.io/audio/salamander/Ds4.mp3',
+            'D#5': 'https://tonejs.github.io/audio/salamander/Ds5.mp3',
+            'F#1': 'https://tonejs.github.io/audio/salamander/Fs1.mp3',
+            'F#2': 'https://tonejs.github.io/audio/salamander/Fs2.mp3',
+            'F#3': 'https://tonejs.github.io/audio/salamander/Fs3.mp3',
+            'F#4': 'https://tonejs.github.io/audio/salamander/Fs4.mp3',
+            'F#5': 'https://tonejs.github.io/audio/salamander/Fs5.mp3',
+            A1: 'https://tonejs.github.io/audio/salamander/A1.mp3',
+            A2: 'https://tonejs.github.io/audio/salamander/A2.mp3',
+            A3: 'https://tonejs.github.io/audio/salamander/A3.mp3',
+            A4: 'https://tonejs.github.io/audio/salamander/A4.mp3',
+            A5: 'https://tonejs.github.io/audio/salamander/A5.mp3',
           },
-          envelope: {
-            attack: 0.08,
-            decay: 0.6,
-            sustain: 0.4,
-            release: 2.5,
+          release: 1,
+          baseUrl: '',
+          onload: () => {
+            console.log('🎹 Piano samples loaded successfully!');
+            setPianoLoading(false);
           },
         });
 
-        // Piano gets the full Bon Iver treatment: filter -> chorus -> delay -> reverb
-        const pianoFilter = new Tone.Filter(1800, 'lowpass');
-        const pianoChorus = new Tone.Chorus(2, 3, 0.3);
-        const pianoDelay = new Tone.PingPongDelay('8n.', 0.25);
+        // Create simple but effective processing for real piano samples
+        const pianoCompressor = new Tone.Compressor(-12, 3); // Gentle compression
+        const pianoReverb = new Tone.Reverb({
+          decay: 2.5,
+          preDelay: 0.05,
+          wet: 0.15, // Light reverb to preserve natural piano sound
+        });
 
-        pianoSynthRef.current
-          .connect(pianoFilter)
-          .connect(pianoChorus)
-          .connect(pianoDelay)
-          .connect(mainReverbRef.current);
+        // Simple, clean signal path: compression -> light reverb
+        if (pianoSynthRef.current) {
+          pianoSynthRef.current
+            .connect(pianoCompressor)
+            .connect(pianoReverb)
+            .connect(mainReverbRef.current);
 
-        pianoSynthRef.current.volume.value = -5;
+          pianoSynthRef.current.volume.value = 2; // Boost volume since samples might be quieter
+        }
 
         // Create lush, ethereal pad with heavy Bon Iver processing
         padSynthRef.current = new Tone.PolySynth(Tone.Synth, {
@@ -365,7 +391,7 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({
         case 'piano':
           if (pianoSynthRef.current) {
             pianoSynthRef.current.volume.value =
-              -5 + Tone.gainToDb(track.volume);
+              2 + Tone.gainToDb(track.volume);
           }
           break;
         case 'pad':
@@ -471,7 +497,7 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({
         break;
       case 'piano':
         if (pianoSynthRef.current) {
-          pianoSynthRef.current.volume.value = -5 + Tone.gainToDb(volume);
+          pianoSynthRef.current.volume.value = 2 + Tone.gainToDb(volume);
         }
         break;
       case 'pad':
@@ -731,12 +757,21 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({
     <div className={`p-6 bg-white rounded-lg shadow-lg ${className}`}>
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
         Guitar Backing Track Machine
+        {pianoLoading && (
+          <div className="inline-flex items-center ml-4 text-sm text-blue-600">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+            Loading piano samples...
+          </div>
+        )}
       </h2>
 
       {/* Preset Selection */}
       <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
         <h3 className="text-lg font-semibold text-blue-800 mb-3">
           Backing Track Presets
+          <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+            🎹 Real Piano Samples
+          </span>
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>

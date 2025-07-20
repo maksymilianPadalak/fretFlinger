@@ -52,7 +52,9 @@ IMPORTANT:
 - Use musical knowledge to create realistic drum patterns, bass lines, and chord progressions
 - Match BPM to the style (slow ballads: 60-80, rock: 120-140, metal: 140-180, jazz: 90-120)
 - Create interesting, musical patterns that guitarists can play along with
+- Piano should sound realistic with appropriate chord voicings and timing (not just on every beat)
 - Use appropriate note values (kick: C1, snare: C2, hihat: C3, bass: various notes, chords: C/Am/F/G etc.)
+- Piano patterns should use authentic chord progressions and realistic timing
 - Return ONLY the JSON object, no additional text.`,
               },
               {
@@ -170,10 +172,10 @@ function generateSimplePreset(description: string) {
         },
         piano: {
           steps: Array.from({ length: 64 }, (_, i) => ({
-            active: i % 8 === 2 || i % 8 === 6, // Piano chords
+            active: i % 8 === 2 || i % 8 === 6, // Piano chords on off-beats
             note: i < 16 ? 'C' : i < 32 ? 'Am' : i < 48 ? 'F' : 'G',
           })),
-          volume: 0.5,
+          volume: 0.7, // Louder for more realistic piano presence
           muted: false,
         },
         pad: {

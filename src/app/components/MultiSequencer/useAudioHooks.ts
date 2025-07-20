@@ -8,7 +8,7 @@ export const useAudioPlayback = (synthRefs: {
   snareSynthRef: React.MutableRefObject<Tone.NoiseSynth | null>;
   hihatSynthRef: React.MutableRefObject<Tone.MetalSynth | null>;
   bassSynthRef: React.MutableRefObject<Tone.MonoSynth | null>;
-  pianoSynthRef: React.MutableRefObject<Tone.PolySynth | null>;
+  pianoSynthRef: React.MutableRefObject<Tone.PolySynth | Tone.Sampler | null>;
   padSynthRef: React.MutableRefObject<Tone.PolySynth | null>;
   leadSynthRef: React.MutableRefObject<Tone.MonoSynth | null>;
 }) => {
