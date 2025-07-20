@@ -10,6 +10,31 @@ const getGuitar = () => {
 
 let audioContext: AudioContext | null = null;
 let sourceNode: MediaStreamAudioSourceNode | null = null;
+let convolverNode: ConvolverNode | null = null;
+let dryGainNode: GainNode | null = null;
+let wetGainNode: GainNode | null = null;
+let outputGainNode: GainNode | null = null;
+
+// Create a simple impulse response for convolution reverb
+const createImpulseResponse = (
+  context: AudioContext,
+  duration: number = 2.0,
+  decay: number = 2.0
+): AudioBuffer => {
+  const length = context.sampleRate * duration;
+  const impulse = context.createBuffer(2, length, context.sampleRate);
+
+  for (let channel = 0; channel < 2; channel++) {
+    const channelData = impulse.getChannelData(channel);
+    for (let i = 0; i < length; i++) {
+      // Create exponentially decaying white noise
+      const n = length - i;
+      channelData[i] = (Math.random() * 2 - 1) * Math.pow(n / length, decay);
+    }
+  }
+
+  return impulse;
+};
 
 const setupContext = async (
   contextRef: React.RefObject<AudioContext>
@@ -18,7 +43,35 @@ const setupContext = async (
     const guitar = await getGuitar();
     const context = new AudioContext();
     const source = context.createMediaStreamSource(guitar);
-    source.connect(context.destination);
+
+    // Create convolution reverb nodes
+    convolverNode = context.createConvolver();
+    dryGainNode = context.createGain();
+    wetGainNode = context.createGain();
+    outputGainNode = context.createGain();
+
+    // Create impulse response for the reverb
+    const impulseResponse = createImpulseResponse(context, 3.0, 2.5); // 3 second reverb with medium decay
+    convolverNode.buffer = impulseResponse;
+
+    // Set initial gain levels
+    dryGainNode.gain.value = 0.7; // Dry signal level
+    wetGainNode.gain.value = 0.5; // Wet signal level
+    outputGainNode.gain.value = 1.0; // Master output level
+
+    // Connect the signal chain:
+    // Dry path: guitar -> dryGain -> output
+    source.connect(dryGainNode);
+    dryGainNode.connect(outputGainNode);
+
+    // Wet path: guitar -> convolver -> wetGain -> output
+    source.connect(convolverNode);
+    convolverNode.connect(wetGainNode);
+    wetGainNode.connect(outputGainNode);
+
+    // Output to speakers
+    outputGainNode.connect(context.destination);
+
     contextRef.current = context;
     audioContext = context;
     sourceNode = source;
@@ -31,6 +84,29 @@ const setupContext = async (
 
 const getAudioContext = () => audioContext;
 const getSourceNode = () => sourceNode;
+
+// Function to control reverb amount (0.0 = no reverb, 1.0 = full reverb)
+const setReverbLevel = (level: number) => {
+  if (wetGainNode) {
+    wetGainNode.gain.value = Math.max(0, Math.min(1, level));
+  }
+};
+
+// Function to control dry signal level (0.0 = no dry, 1.0 = full dry)
+const setDryLevel = (level: number) => {
+  if (dryGainNode) {
+    dryGainNode.gain.value = Math.max(0, Math.min(1, level));
+  }
+};
+
+// Function to set dry/wet mix (0.0 = all dry, 1.0 = all wet)
+const setReverbMix = (mix: number) => {
+  if (dryGainNode && wetGainNode) {
+    const clampedMix = Math.max(0, Math.min(1, mix));
+    dryGainNode.gain.value = 1.0 - clampedMix;
+    wetGainNode.gain.value = clampedMix;
+  }
+};
 
 // Function to get accurate duration using Web Audio API
 const getAccurateDuration = async (blob: Blob): Promise<number> => {
@@ -219,4 +295,7 @@ export {
   formatDuration,
   formatSize,
   waitForRecordingProcessing,
+  setReverbLevel,
+  setDryLevel,
+  setReverbMix,
 };

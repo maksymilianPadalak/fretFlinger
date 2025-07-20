@@ -98,9 +98,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* API Test Component (development only) */}
-        {process.env.NODE_ENV === 'development' && <TestGenerator />}
-
         {/* Guitar Audio Processor */}
         <GuitarProcessor />
 

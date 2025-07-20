@@ -138,6 +138,21 @@ export default function GuitarProcessor({
         </div>
       )}
 
+      {/* Convolution Reverb Control */}
+      <div className="mb-6 p-4 bg-gray-50 rounded border">
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium text-gray-700">
+            🎸 Guitar Reverb (Convolution)
+          </label>
+          <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+            ✓ Active
+          </span>
+        </div>
+        <div className="text-xs text-gray-500 text-center">
+          Real convolution reverb with impulse response - Dry + Wet signal mix
+        </div>
+      </div>
+
       <div className="flex gap-4">
         <button
           onClick={handleRecordClick}
