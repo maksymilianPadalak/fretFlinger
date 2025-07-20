@@ -610,14 +610,39 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({
     Tone.Transport.start();
     setIsPlaying(true);
   }, [bpm]);
-
   const stopSequencer = useCallback(() => {
-    Tone.Transport.stop();
-    sequenceRef.current?.stop();
-    sequenceRef.current?.dispose();
-    sequenceRef.current = null;
-    setIsPlaying(false);
-    setCurrentStep(-1);
+    try {
+      // Stop transport first
+      if (Tone.Transport.state === 'started') {
+        Tone.Transport.stop();
+      }
+
+      // Clean up sequence safely
+      if (sequenceRef.current) {
+        try {
+          sequenceRef.current.stop();
+        } catch (error) {
+          console.warn('Error stopping sequence:', error);
+        }
+
+        try {
+          sequenceRef.current.dispose();
+        } catch (error) {
+          console.warn('Error disposing sequence:', error);
+        }
+
+        sequenceRef.current = null;
+      }
+
+      // Reset state
+      setIsPlaying(false);
+      setCurrentStep(-1);
+    } catch (error) {
+      console.error('Error in stopSequencer:', error);
+      // Force reset state even if there's an error
+      setIsPlaying(false);
+      setCurrentStep(-1);
+    }
   }, []);
 
   const handlePlayStop = () => {
