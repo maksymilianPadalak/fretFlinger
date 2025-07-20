@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, conversation_id } = await request.json();
+    const { message, conversation_id } = await request.json(); // Call OpenAI to understand the user's intent
 
-    // Call OpenAI to understand the user's intent
     const openaiResponse = await fetch(
       `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/generate-preset`,
       {
@@ -22,9 +21,8 @@ export async function POST(request: NextRequest) {
       throw new Error('Failed to generate preset');
     }
 
-    const { preset } = await openaiResponse.json();
+    const { preset } = await openaiResponse.json(); // Return the preset data that will be sent to the voice agent
 
-    // Return the preset data that will be sent to the voice agent
     return NextResponse.json({
       preset,
       response: `I've created a custom backing track called "${preset.name}" for you. ${preset.description} It's set to ${preset.bpm} BPM. The preset has been loaded and is ready to play!`,
