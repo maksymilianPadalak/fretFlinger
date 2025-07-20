@@ -4,9 +4,9 @@ import { getChordNotes } from './audioUtils';
 import { Track } from './types';
 
 export const useAudioPlayback = (synthRefs: {
-  kickSynthRef: React.MutableRefObject<Tone.MembraneSynth | null>;
-  snareSynthRef: React.MutableRefObject<Tone.NoiseSynth | null>;
-  hihatSynthRef: React.MutableRefObject<Tone.MetalSynth | null>;
+  kickSynthRef: React.MutableRefObject<Tone.Sampler | null>;
+  snareSynthRef: React.MutableRefObject<Tone.Sampler | null>;
+  hihatSynthRef: React.MutableRefObject<Tone.Sampler | null>;
   bassSynthRef: React.MutableRefObject<Tone.MonoSynth | null>;
   pianoSynthRef: React.MutableRefObject<Tone.PolySynth | Tone.Sampler | null>;
   padSynthRef: React.MutableRefObject<Tone.PolySynth | null>;
@@ -41,9 +41,16 @@ export const useAudioPlayback = (synthRefs: {
       if (synthRefs.snareSynthRef.current) {
         try {
           if (time !== undefined) {
-            synthRefs.snareSynthRef.current.triggerAttackRelease('8n', time);
+            synthRefs.snareSynthRef.current.triggerAttackRelease(
+              noteString,
+              '8n',
+              time
+            );
           } else {
-            synthRefs.snareSynthRef.current.triggerAttackRelease('8n');
+            synthRefs.snareSynthRef.current.triggerAttackRelease(
+              noteString,
+              '8n'
+            );
           }
         } catch (error) {
           console.warn('Snare synth timing error:', error);
@@ -59,12 +66,15 @@ export const useAudioPlayback = (synthRefs: {
         try {
           if (time !== undefined) {
             synthRefs.hihatSynthRef.current.triggerAttackRelease(
-              'C4',
+              noteString,
               '16n',
               time
             );
           } else {
-            synthRefs.hihatSynthRef.current.triggerAttackRelease('C4', '16n');
+            synthRefs.hihatSynthRef.current.triggerAttackRelease(
+              noteString,
+              '16n'
+            );
           }
         } catch (error) {
           console.warn('Hihat synth timing error:', error);

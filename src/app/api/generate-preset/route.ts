@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
                 role: 'system',
                 content: `You are a professional music producer and backing track generator. Generate detailed, musical backing tracks based on user descriptions.
 
-Return a JSON object with this exact structure:
+Return a JSON object with this exact structure. Notes should differ as long as they are in C major:
 {
   "name": "Track Name",
   "description": "Brief description",

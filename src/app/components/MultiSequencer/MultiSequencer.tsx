@@ -92,11 +92,12 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({
 
   const [selectedPreset, setSelectedPreset] = useState<string>('');
   const [pianoLoading, setPianoLoading] = useState<boolean>(true);
+  const [drumsLoading, setDrumsLoading] = useState<boolean>(true);
 
   const sequenceRef = useRef<Tone.Sequence | null>(null);
-  const kickSynthRef = useRef<Tone.MembraneSynth | null>(null);
-  const snareSynthRef = useRef<Tone.NoiseSynth | null>(null);
-  const hihatSynthRef = useRef<Tone.MetalSynth | null>(null);
+  const kickSynthRef = useRef<Tone.Sampler | null>(null);
+  const snareSynthRef = useRef<Tone.Sampler | null>(null);
+  const hihatSynthRef = useRef<Tone.Sampler | null>(null);
   const bassSynthRef = useRef<Tone.MonoSynth | null>(null);
   const pianoSynthRef = useRef<Tone.PolySynth | Tone.Sampler | null>(null);
   const padSynthRef = useRef<Tone.PolySynth | null>(null);
@@ -157,85 +158,63 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({
           Tone.gainToDb(masterVolume)
         ).toDestination();
 
-        // Create warm, filtered kick drum with Bon Iver processing
-        kickSynthRef.current = new Tone.MembraneSynth({
-          pitchDecay: 0.2,
-          octaves: 4,
-          oscillator: {
-            type: 'sine',
+        // Create real kick drum sampler with authentic samples
+        kickSynthRef.current = new Tone.Sampler({
+          urls: {
+            C1: 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/kick.mp3',
           },
-          envelope: {
-            attack: 0.02,
-            decay: 1.2,
-            sustain: 0.03,
-            release: 2.5,
+          baseUrl: '',
+          onload: () => {
+            console.log('🥁 Kick samples loaded successfully!');
+            setDrumsLoading(false);
           },
         });
 
-        // Add filter and connect to effects chain
-        const kickFilter = new Tone.Filter(120, 'lowpass').connect(
-          drumReverbRef.current
-        );
-        kickSynthRef.current.connect(kickFilter);
-        kickSynthRef.current.volume.value = -8;
+        if (kickSynthRef.current) {
+          kickSynthRef.current.connect(drumReverbRef.current);
+          kickSynthRef.current.volume.value = -2; // Punchy kick volume
+        }
 
-        // Create soft, filtered snare with ethereal processing
-        snareSynthRef.current = new Tone.NoiseSynth({
-          noise: { type: 'pink' },
-          envelope: {
-            attack: 0.02,
-            decay: 0.4,
-            sustain: 0.0,
-            release: 0.8,
+        // Create real snare drum sampler with authentic samples
+        snareSynthRef.current = new Tone.Sampler({
+          urls: {
+            C2: 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/snare.mp3',
           },
+          baseUrl: '',
         });
 
-        const snareFilter = new Tone.Filter(3000, 'lowpass').connect(
-          drumReverbRef.current
-        );
-        snareSynthRef.current.connect(snareFilter);
-        snareSynthRef.current.volume.value = -12;
+        if (snareSynthRef.current) {
+          snareSynthRef.current.connect(drumReverbRef.current);
+          snareSynthRef.current.volume.value = -4; // Clear snare volume
+        }
 
-        // Create soft, filtered hi-hat with dreamy processing
-        hihatSynthRef.current = new Tone.MetalSynth({
-          envelope: {
-            attack: 0.008,
-            decay: 0.15,
-            release: 0.08,
+        // Create real hi-hat sampler with authentic samples
+        hihatSynthRef.current = new Tone.Sampler({
+          urls: {
+            C3: 'https://tonejs.github.io/audio/drum-samples/acoustic-kit/hihat.mp3',
           },
-          harmonicity: 2.5,
-          modulationIndex: 12,
-          resonance: 1500,
-          octaves: 0.8,
+          baseUrl: '',
         });
 
-        const hihatFilter = new Tone.Filter(8000, 'lowpass').connect(
-          drumReverbRef.current
-        );
-        hihatSynthRef.current.connect(hihatFilter);
-        hihatSynthRef.current.volume.value = -18;
+        if (hihatSynthRef.current) {
+          hihatSynthRef.current.connect(drumReverbRef.current);
+          hihatSynthRef.current.volume.value = -8; // Clean hi-hat volume
+        }
 
-        // Create warm, Bon Iver-style bass with filter and delay
+        // Create clean, punchy bass (no effects - plain bass as requested)
         bassSynthRef.current = new Tone.MonoSynth({
-          oscillator: { type: 'sine' },
-          envelope: { attack: 0.08, decay: 0.6, sustain: 0.7, release: 1.2 },
-          filterEnvelope: {
-            attack: 0.15,
-            decay: 0.4,
+          oscillator: { type: 'sawtooth' }, // Sawtooth for more bass presence
+          envelope: {
+            attack: 0.01, // Quick attack for punchy bass
+            decay: 0.3,
             sustain: 0.8,
-            release: 1.0,
-          },
-          filter: {
-            Q: 0.8,
-            frequency: 800,
+            release: 0.5, // Shorter release for tighter bass
           },
         });
 
-        const bassFilter = new Tone.Filter(1200, 'lowpass').connect(
-          mainReverbRef.current
-        );
-        bassSynthRef.current.connect(bassFilter);
-        bassSynthRef.current.volume.value = 1;
+        // Connect directly to destination - no effects, no reverb, just plain bass
+        bassSynthRef.current.connect(masterVolumeRef.current);
+        bassSynthRef.current.volume.value = 4; // Louder for more bass presence
 
         // Create real piano sampler with authentic samples
         pianoSynthRef.current = new Tone.Sampler({
@@ -368,24 +347,24 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({
         case 'kick':
           if (kickSynthRef.current) {
             kickSynthRef.current.volume.value =
-              -8 + Tone.gainToDb(track.volume);
+              -2 + Tone.gainToDb(track.volume);
           }
           break;
         case 'snare':
           if (snareSynthRef.current) {
             snareSynthRef.current.volume.value =
-              -12 + Tone.gainToDb(track.volume);
+              -4 + Tone.gainToDb(track.volume);
           }
           break;
         case 'hihat':
           if (hihatSynthRef.current) {
             hihatSynthRef.current.volume.value =
-              -18 + Tone.gainToDb(track.volume);
+              -8 + Tone.gainToDb(track.volume);
           }
           break;
         case 'bass':
           if (bassSynthRef.current) {
-            bassSynthRef.current.volume.value = 1 + Tone.gainToDb(track.volume);
+            bassSynthRef.current.volume.value = 4 + Tone.gainToDb(track.volume);
           }
           break;
         case 'piano':
@@ -477,22 +456,22 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({
     switch (trackId) {
       case 'kick':
         if (kickSynthRef.current) {
-          kickSynthRef.current.volume.value = -8 + Tone.gainToDb(volume);
+          kickSynthRef.current.volume.value = -2 + Tone.gainToDb(volume);
         }
         break;
       case 'snare':
         if (snareSynthRef.current) {
-          snareSynthRef.current.volume.value = -12 + Tone.gainToDb(volume);
+          snareSynthRef.current.volume.value = -4 + Tone.gainToDb(volume);
         }
         break;
       case 'hihat':
         if (hihatSynthRef.current) {
-          hihatSynthRef.current.volume.value = -18 + Tone.gainToDb(volume);
+          hihatSynthRef.current.volume.value = -8 + Tone.gainToDb(volume);
         }
         break;
       case 'bass':
         if (bassSynthRef.current) {
-          bassSynthRef.current.volume.value = 1 + Tone.gainToDb(volume);
+          bassSynthRef.current.volume.value = 4 + Tone.gainToDb(volume);
         }
         break;
       case 'piano':
@@ -570,18 +549,22 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({
               switch (track.id) {
                 case 'kick':
                   if (kickSynthRef.current) {
-                    kickSynthRef.current.triggerAttackRelease(note, '8n', time);
+                    kickSynthRef.current.triggerAttackRelease('C1', '8n', time);
                   }
                   break;
                 case 'snare':
                   if (snareSynthRef.current) {
-                    snareSynthRef.current.triggerAttackRelease('8n', time);
+                    snareSynthRef.current.triggerAttackRelease(
+                      'C2',
+                      '8n',
+                      time
+                    );
                   }
                   break;
                 case 'hihat':
                   if (hihatSynthRef.current) {
                     hihatSynthRef.current.triggerAttackRelease(
-                      'C4',
+                      'C3',
                       '16n',
                       time
                     );
@@ -757,10 +740,10 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({
     <div className={`p-6 bg-white rounded-lg shadow-lg ${className}`}>
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
         Guitar Backing Track Machine
-        {pianoLoading && (
+        {(pianoLoading || drumsLoading) && (
           <div className="inline-flex items-center ml-4 text-sm text-blue-600">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-            Loading piano samples...
+            Loading real samples...
           </div>
         )}
       </h2>
@@ -770,7 +753,7 @@ const MultiSequencer: React.FC<MultiSequencerProps> = ({
         <h3 className="text-lg font-semibold text-blue-800 mb-3">
           Backing Track Presets
           <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-            🎹 Real Piano Samples
+            🎹🥁 Real Piano & Drum Samples + Plain Bass
           </span>
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
